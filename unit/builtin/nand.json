@@ -1,0 +1,43 @@
+{
+    "name": "nand",
+    "nodes": {
+        "and": {
+            "unit_type": "and"
+        },
+        "not": {
+            "unit_type": "not"
+        }
+    },
+    "input": {
+        "a": [
+            {
+                "uid": "and",
+                "pid": "a"
+            }
+        ],
+        "b": [
+            {
+                "uid": "and",
+                "pid": "b"
+            }
+        ]
+    },
+    "edges": [
+        {
+            "from": {
+                "uid": "and",
+                "pid": "out"
+            },
+            "to": {
+                "uid": "not",
+                "pid": "v"
+            }
+        }
+    ],
+    "output": {
+        "out": {
+            "uid": "not",
+            "pid": "out"
+        }
+    }
+}

@@ -1,0 +1,104 @@
+{
+    "name": "add",
+    "nodes": {
+        "xor_0": {
+            "unit_type": "xor"
+        },
+        "xor_1": {
+            "unit_type": "xor"
+        },
+        "and_0": {
+            "unit_type": "and"
+        },
+        "and_1": {
+            "unit_type": "and"
+        },
+        "or": {
+            "unit_type": "or"
+        }
+    },
+    "input": {
+        "a": [
+            {
+                "uid": "xor_0",
+                "pid": "a"
+            },
+            {
+                "uid": "and_1",
+                "pid": "a"
+            }
+        ],
+        "b": [
+            {
+                "uid": "xor_0",
+                "pid": "b"
+            },
+            {
+                "uid": "and_1",
+                "pid": "b"
+            }
+        ],
+        "c_in": [
+            {
+                "uid": "xor_1",
+                "pid": "b"
+            },
+            {
+                "uid": "and_0",
+                "pid": "a"
+            }
+        ]
+    },
+    "edges": [
+        {
+            "from": {
+                "uid": "xor_0",
+                "pid": "out"
+            },
+            "to": {
+                "uid": "xor_1",
+                "pid": "a"
+            }
+        },
+        {
+            "from": {
+                "uid": "xor_0",
+                "pid": "out"
+            },
+            "to": {
+                "uid": "and_0",
+                "pid": "b"
+            }
+        },
+        {
+            "from": {
+                "uid": "and_0",
+                "pid": "out"
+            },
+            "to": {
+                "uid": "or",
+                "pid": "a"
+            }
+        },
+        {
+            "from": {
+                "uid": "and_1",
+                "pid": "out"
+            },
+            "to": {
+                "uid": "or",
+                "pid": "b"
+            }
+        }
+    ],
+    "output": {
+        "sum": {
+            "uid": "xor_1",
+            "pid": "out"
+        },
+        "c_out": {
+            "uid": "or",
+            "pid": "out"
+        }
+    }
+}

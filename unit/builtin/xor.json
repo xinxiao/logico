@@ -1,0 +1,64 @@
+{
+    "name": "xor",
+    "nodes": {
+        "or": {
+            "unit_type": "or"
+        },
+        "nand": {
+            "unit_type": "nand"
+        },
+        "and": {
+            "unit_type": "and"
+        }
+    },
+    "input": {
+        "a": [
+            {
+                "uid": "or",
+                "pid": "a"
+            },
+            {
+                "uid": "nand",
+                "pid": "a"
+            }
+        ],
+        "b": [
+            {
+                "uid": "or",
+                "pid": "b"
+            },
+            {
+                "uid": "nand",
+                "pid": "b"
+            }
+        ]
+    },
+    "edges": [
+        {
+            "from": {
+                "uid": "or",
+                "pid": "out"
+            },
+            "to": {
+                "uid": "and",
+                "pid": "a"
+            }
+        },
+        {
+            "from": {
+                "uid": "nand",
+                "pid": "out"
+            },
+            "to": {
+                "uid": "and",
+                "pid": "b"
+            }
+        }
+    ],
+    "output": {
+        "out": {
+            "uid": "and",
+            "pid": "out"
+        }
+    }
+}

@@ -4,7 +4,7 @@
         "flip_8bit_0": "flip_8bit",
         "flip_8bit_1": "flip_8bit"
     },
-    "input": {
+    "inputs": {
         "v_0": [
             {
                 "uid": "flip_8bit_0",
@@ -102,7 +102,7 @@
             }
         ]
     },
-    "output": {
+    "outputs": {
         "out_0": {
             "uid": "flip_8bit_0",
             "pid": "out_0"

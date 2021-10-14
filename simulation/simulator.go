@@ -91,11 +91,12 @@ func NewSimulationTracker(c *unit.Circuit, args map[string]bool) *SimulationTrac
 }
 
 func (st *SimulationTracker) input(bs *Simulator, p blueprint.CircuitPin) (bool, error) {
-	if v, ok := st.in[p]; ok {
+
+	if v, ok := st.c.ConstantPins[p]; ok {
 		return v, nil
 	}
 
-	if v, ok := st.c.ConstantPins[p]; ok {
+	if v, ok := st.in[p]; ok {
 		return v, nil
 	}
 

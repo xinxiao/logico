@@ -4,7 +4,7 @@
         "or": "or",
         "not": "not"
     },
-    "input": {
+    "inputs": {
         "a": [
             {
                 "uid": "or",
@@ -30,7 +30,7 @@
             }
         }
     ],
-    "output": {
+    "outputs": {
         "out": {
             "uid": "not",
             "pid": "out"

@@ -6,7 +6,7 @@
         "and_1": "and",
         "or": "or"
     },
-    "input": {
+    "inputs": {
         "a": [
             {
                 "uid": "and_0",
@@ -62,7 +62,7 @@
             }
         }
     ],
-    "output": {
+    "outputs": {
         "out": {
             "uid": "or",
             "pid": "out"

@@ -23,23 +23,25 @@ func BuildCircuitFromBlueprint(cbp blueprint.CircuitBlueprint) *Circuit {
 		OutputPins:   make(map[string]blueprint.CircuitPin),
 	}
 
-	for n, ipl := range cbp.Input {
+	for n, ipl := range cbp.Inputs {
 		for _, ip := range ipl {
 			c.InputPins[ip] = n
 		}
 	}
 
-	for n, cpl := range cbp.Constant {
-		for _, cp := range cpl {
-			c.ConstantPins[cp] = n
-		}
+	for _, cp := range cbp.AlwaysOn {
+		c.ConstantPins[cp] = true
+	}
+
+	for _, cp := range cbp.AlwaysOff {
+		c.ConstantPins[cp] = false
 	}
 
 	for _, e := range cbp.Edges {
 		c.Edges[e.To] = e.From
 	}
 
-	for n, op := range cbp.Output {
+	for n, op := range cbp.Outputs {
 		c.OutputPins[n] = op
 	}
 

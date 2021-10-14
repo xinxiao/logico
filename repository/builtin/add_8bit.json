@@ -4,7 +4,7 @@
         "add_4bit_0": "add_4bit",
         "add_4bit_1": "add_4bit"
     },
-    "input": {
+    "inputs": {
         "a_0": [
             {
                 "uid": "add_4bit_0",
@@ -120,7 +120,7 @@
             }
         }
     ],
-    "output": {
+    "outputs": {
         "sum_0": {
             "uid": "add_4bit_0",
             "pid": "sum_0"

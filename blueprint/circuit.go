@@ -11,10 +11,11 @@ type CircuitEdge struct {
 }
 
 type CircuitBlueprint struct {
-	Name     string                  `json:"name"`
-	Nodes    map[string]string       `json:"nodes"`
-	Input    map[string][]CircuitPin `json:"input"`
-	Constant map[bool][]CircuitPin   `json:"constant_input,omitempty"`
-	Edges    []CircuitEdge           `json:"edges,omitempty"`
-	Output   map[string]CircuitPin   `json:"output"`
+	Name      string                  `json:"name"`
+	Nodes     map[string]string       `json:"nodes"`
+	AlwaysOn  []CircuitPin            `json:"always_on,omitempty"`
+	AlwaysOff []CircuitPin            `json:"always_off,omitempty"`
+	Inputs    map[string][]CircuitPin `json:"inputs"`
+	Edges     []CircuitEdge           `json:"edges,omitempty"`
+	Outputs   map[string]CircuitPin   `json:"outputs"`
 }

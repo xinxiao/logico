@@ -10,7 +10,7 @@
         "not_6": "not",
         "not_7": "not"
     },
-    "input": {
+    "inputs": {
         "v_0": [
             {
                 "uid": "not_0",
@@ -60,7 +60,7 @@
             }
         ]
     },
-    "output": {
+    "outputs": {
         "out_0": {
             "uid": "not_0",
             "pid": "out"

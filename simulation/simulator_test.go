@@ -235,6 +235,10 @@ func generateFlipTestCases(bs int) []*flipTestCase {
 			v:   i,
 			out: (m ^ i) & m,
 		})
+
+		if len(l) >= maxTestCasesSize {
+			return l
+		}
 	}
 	return l
 }
@@ -278,6 +282,72 @@ func TestSimulate_Flip8Bit(t *testing.T) {
 
 func TestSimulate_Flip16Bit(t *testing.T) {
 	testSimulate_Flip(t, 16)
+}
+
+type negateTestCase struct {
+	v   int64
+	out int64
+}
+
+func generateNegateTestCases(bs int) []*negateTestCase {
+	l := []*negateTestCase{{v: 0, out: 0}}
+	for i := int64(1); i <= getMaskForSize(bs-1); i++ {
+		l = append(l,
+			&negateTestCase{
+				v:   i,
+				out: -i,
+			},
+			&negateTestCase{
+				v:   -i,
+				out: i,
+			})
+
+		if len(l) >= maxTestCasesSize {
+			return l
+		}
+	}
+	return l
+}
+
+func testSimulate_Negate(t *testing.T, bs int) {
+	ur, err := repository.NewUnitRepository()
+	if err != nil {
+		t.Fatalf("failed to create unit repository: %s", err)
+	}
+
+	sim := NewSimulator(ur)
+
+	for i, tc := range generateNegateTestCases(bs) {
+		negate := fmt.Sprintf("negate_%dbit", bs)
+
+		in := map[string]bool{}
+		expected := map[string]bool{}
+
+		for i := 0; i < bs; i++ {
+			m := int64(0b1) << i
+
+			in[fmt.Sprintf("v_%d", i)] = (tc.v & m) != 0
+
+			expected[fmt.Sprintf("out_%d", i)] = (tc.out & m) != 0
+		}
+
+		got, err := sim.Simulate(negate, in)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+
+		if !cmp.Equal(got, expected) {
+			t.Errorf("tc %d: %s(v: %d): %s", i, negate, tc.v, cmp.Diff(got, expected))
+		}
+	}
+}
+
+func TestSimulate_Negate8Bit(t *testing.T) {
+	testSimulate_Negate(t, 8)
+}
+
+func TestSimulate_Negate16Bit(t *testing.T) {
+	testSimulate_Negate(t, 16)
 }
 
 type addTestCase struct {

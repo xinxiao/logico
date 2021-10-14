@@ -1,30 +1,49 @@
 package unit
 
-type CircuitPin struct {
-	UnitId string `json:"uid"`
-	PinId  string `json:"pid"`
-}
-
-func NewCircuitPin(uid, pid string) CircuitPin {
-	return CircuitPin{uid, pid}
-}
-
-type CircuitUnitNode struct {
-	UnitType string `json:"unit_type"`
-}
-
-type CircuitEdge struct {
-	From CircuitPin `json:"from"`
-	To   CircuitPin `json:"to"`
-}
+import (
+	"github.com/xinxiao/logico/blueprint"
+)
 
 type Circuit struct {
-	CircuitName      string                     `json:"name"`
-	CircuitUnitNodes map[string]CircuitUnitNode `json:"nodes"`
-	InputPinMap      map[string][]CircuitPin    `json:"input"`
-	InputConstantMap map[bool][]CircuitPin      `json:"constant_input,omitempty"`
-	InteriorEdges    []CircuitEdge              `json:"edges"`
-	OutputPinMap     map[string]CircuitPin      `json:"output"`
+	CircuitName  string
+	Units        map[string]string
+	InputPins    map[blueprint.CircuitPin]string
+	ConstantPins map[blueprint.CircuitPin]bool
+	Edges        map[blueprint.CircuitPin]blueprint.CircuitPin
+	OutputPins   map[string]blueprint.CircuitPin
+}
+
+func BuildCircuitFromBlueprint(cbp blueprint.CircuitBlueprint) *Circuit {
+	c := &Circuit{
+		CircuitName:  cbp.Name,
+		Units:        cbp.Nodes,
+		InputPins:    make(map[blueprint.CircuitPin]string),
+		ConstantPins: make(map[blueprint.CircuitPin]bool),
+		Edges:        make(map[blueprint.CircuitPin]blueprint.CircuitPin),
+		OutputPins:   make(map[string]blueprint.CircuitPin),
+	}
+
+	for n, ipl := range cbp.Input {
+		for _, ip := range ipl {
+			c.InputPins[ip] = n
+		}
+	}
+
+	for n, cpl := range cbp.Constant {
+		for _, cp := range cpl {
+			c.ConstantPins[cp] = n
+		}
+	}
+
+	for _, e := range cbp.Edges {
+		c.Edges[e.To] = e.From
+	}
+
+	for n, op := range cbp.Output {
+		c.OutputPins[n] = op
+	}
+
+	return c
 }
 
 func (c *Circuit) Name() string {
@@ -32,8 +51,13 @@ func (c *Circuit) Name() string {
 }
 
 func (c *Circuit) Input() []string {
+	im := make(map[string]bool)
+	for _, in := range c.InputPins {
+		im[in] = true
+	}
+
 	in := make([]string, 0)
-	for n := range c.InputPinMap {
+	for n := range im {
 		in = append(in, n)
 	}
 	return in
@@ -41,8 +65,6 @@ func (c *Circuit) Input() []string {
 
 func (c *Circuit) Output() []string {
 	out := make([]string, 0)
-	for n := range c.OutputPinMap {
-		out = append(out, n)
-	}
+
 	return out
 }

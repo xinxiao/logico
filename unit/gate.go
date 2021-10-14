@@ -5,11 +5,11 @@ const (
 )
 
 type Gate struct {
-	n string
+	GateName string
 }
 
 func (g *Gate) Name() string {
-	return g.n
+	return g.GateName
 }
 
 func (g *Gate) Output() []string {

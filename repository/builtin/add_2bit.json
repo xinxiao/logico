@@ -1,0 +1,65 @@
+{
+    "name": "add_2bit",
+    "nodes": {
+        "add_1bit_0": "add_1bit",
+        "add_1bit_1": "add_1bit"
+    },
+    "input": {
+        "a_0": [
+            {
+                "uid": "add_1bit_0",
+                "pid": "a_0"
+            }
+        ],
+        "a_1": [
+            {
+                "uid": "add_1bit_1",
+                "pid": "a_0"
+            }
+        ],
+        "b_0": [
+            {
+                "uid": "add_1bit_0",
+                "pid": "b_0"
+            }
+        ],
+        "b_1": [
+            {
+                "uid": "add_1bit_1",
+                "pid": "b_0"
+            }
+        ],
+        "c_in": [
+            {
+                "uid": "add_1bit_0",
+                "pid": "c_in"
+            }
+        ]
+    },
+    "edges": [
+        {
+            "from": {
+                "uid": "add_1bit_0",
+                "pid": "c_out"
+            },
+            "to": {
+                "uid": "add_1bit_1",
+                "pid": "c_in"
+            }
+        }
+    ],
+    "output": {
+        "sum_0": {
+            "uid": "add_1bit_0",
+            "pid": "sum_0"
+        },
+        "sum_1": {
+            "uid": "add_1bit_1",
+            "pid": "sum_0"
+        },
+        "c_out": {
+            "uid": "add_1bit_1",
+            "pid": "c_out"
+        }
+    }
+}

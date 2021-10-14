@@ -1,0 +1,97 @@
+{
+    "name": "flip_8bit",
+    "nodes": {
+        "not_0": "not",
+        "not_1": "not",
+        "not_2": "not",
+        "not_3": "not",
+        "not_4": "not",
+        "not_5": "not",
+        "not_6": "not",
+        "not_7": "not"
+    },
+    "input": {
+        "v_0": [
+            {
+                "uid": "not_0",
+                "pid": "v"
+            }
+        ],
+        "v_1": [
+            {
+                "uid": "not_1",
+                "pid": "v"
+            }
+        ],
+        "v_2": [
+            {
+                "uid": "not_2",
+                "pid": "v"
+            }
+        ],
+        "v_3": [
+            {
+                "uid": "not_3",
+                "pid": "v"
+            }
+        ],
+        "v_4": [
+            {
+                "uid": "not_4",
+                "pid": "v"
+            }
+        ],
+        "v_5": [
+            {
+                "uid": "not_5",
+                "pid": "v"
+            }
+        ],
+        "v_6": [
+            {
+                "uid": "not_6",
+                "pid": "v"
+            }
+        ],
+        "v_7": [
+            {
+                "uid": "not_7",
+                "pid": "v"
+            }
+        ]
+    },
+    "output": {
+        "out_0": {
+            "uid": "not_0",
+            "pid": "out"
+        },
+        "out_1": {
+            "uid": "not_1",
+            "pid": "out"
+        },
+        "out_2": {
+            "uid": "not_2",
+            "pid": "out"
+        },
+        "out_3": {
+            "uid": "not_3",
+            "pid": "out"
+        },
+        "out_4": {
+            "uid": "not_4",
+            "pid": "out"
+        },
+        "out_5": {
+            "uid": "not_5",
+            "pid": "out"
+        },
+        "out_6": {
+            "uid": "not_6",
+            "pid": "out"
+        },
+        "out_7": {
+            "uid": "not_7",
+            "pid": "out"
+        }
+    }
+}

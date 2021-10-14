@@ -1,15 +1,9 @@
 {
     "name": "xor",
     "nodes": {
-        "or": {
-            "unit_type": "or"
-        },
-        "nand": {
-            "unit_type": "nand"
-        },
-        "and": {
-            "unit_type": "and"
-        }
+        "or": "or",
+        "nand": "nand",
+        "and": "and"
     },
     "input": {
         "a": [

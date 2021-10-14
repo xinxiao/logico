@@ -1,0 +1,171 @@
+{
+    "name": "flip_16bit",
+    "nodes": {
+        "flip_8bit_0": "flip_8bit",
+        "flip_8bit_1": "flip_8bit"
+    },
+    "input": {
+        "v_0": [
+            {
+                "uid": "flip_8bit_0",
+                "pid": "v_0"
+            }
+        ],
+        "v_1": [
+            {
+                "uid": "flip_8bit_0",
+                "pid": "v_1"
+            }
+        ],
+        "v_2": [
+            {
+                "uid": "flip_8bit_0",
+                "pid": "v_2"
+            }
+        ],
+        "v_3": [
+            {
+                "uid": "flip_8bit_0",
+                "pid": "v_3"
+            }
+        ],
+        "v_4": [
+            {
+                "uid": "flip_8bit_0",
+                "pid": "v_4"
+            }
+        ],
+        "v_5": [
+            {
+                "uid": "flip_8bit_0",
+                "pid": "v_5"
+            }
+        ],
+        "v_6": [
+            {
+                "uid": "flip_8bit_0",
+                "pid": "v_6"
+            }
+        ],
+        "v_7": [
+            {
+                "uid": "flip_8bit_0",
+                "pid": "v_7"
+            }
+        ],
+        "v_8": [
+            {
+                "uid": "flip_8bit_1",
+                "pid": "v_0"
+            }
+        ],
+        "v_9": [
+            {
+                "uid": "flip_8bit_1",
+                "pid": "v_1"
+            }
+        ],
+        "v_10": [
+            {
+                "uid": "flip_8bit_1",
+                "pid": "v_2"
+            }
+        ],
+        "v_11": [
+            {
+                "uid": "flip_8bit_1",
+                "pid": "v_3"
+            }
+        ],
+        "v_12": [
+            {
+                "uid": "flip_8bit_1",
+                "pid": "v_4"
+            }
+        ],
+        "v_13": [
+            {
+                "uid": "flip_8bit_1",
+                "pid": "v_5"
+            }
+        ],
+        "v_14": [
+            {
+                "uid": "flip_8bit_1",
+                "pid": "v_6"
+            }
+        ],
+        "v_15": [
+            {
+                "uid": "flip_8bit_1",
+                "pid": "v_7"
+            }
+        ]
+    },
+    "output": {
+        "out_0": {
+            "uid": "flip_8bit_0",
+            "pid": "out_0"
+        },
+        "out_1": {
+            "uid": "flip_8bit_0",
+            "pid": "out_1"
+        },
+        "out_2": {
+            "uid": "flip_8bit_0",
+            "pid": "out_2"
+        },
+        "out_3": {
+            "uid": "flip_8bit_0",
+            "pid": "out_3"
+        },
+        "out_4": {
+            "uid": "flip_8bit_0",
+            "pid": "out_4"
+        },
+        "out_5": {
+            "uid": "flip_8bit_0",
+            "pid": "out_5"
+        },
+        "out_6": {
+            "uid": "flip_8bit_0",
+            "pid": "out_6"
+        },
+        "out_7": {
+            "uid": "flip_8bit_0",
+            "pid": "out_7"
+        },
+        "out_8": {
+            "uid": "flip_8bit_1",
+            "pid": "out_0"
+        },
+        "out_9": {
+            "uid": "flip_8bit_1",
+            "pid": "out_1"
+        },
+        "out_10": {
+            "uid": "flip_8bit_1",
+            "pid": "out_2"
+        },
+        "out_11": {
+            "uid": "flip_8bit_1",
+            "pid": "out_3"
+        },
+        "out_12": {
+            "uid": "flip_8bit_1",
+            "pid": "out_4"
+        },
+        "out_13": {
+            "uid": "flip_8bit_1",
+            "pid": "out_5"
+        },
+        "out_14": {
+            "uid": "flip_8bit_1",
+            "pid": "out_6"
+        },
+        "out_15": {
+            "uid": "flip_8bit_1",
+            "pid": "out_7"
+        }
+    }
+}

@@ -1,24 +1,14 @@
 {
-    "name": "add",
+    "name": "add_1bit",
     "nodes": {
-        "xor_0": {
-            "unit_type": "xor"
-        },
-        "xor_1": {
-            "unit_type": "xor"
-        },
-        "and_0": {
-            "unit_type": "and"
-        },
-        "and_1": {
-            "unit_type": "and"
-        },
-        "or": {
-            "unit_type": "or"
-        }
+        "xor_0": "xor",
+        "xor_1": "xor",
+        "and_0": "and",
+        "and_1": "and",
+        "or": "or"
     },
     "input": {
-        "a": [
+        "a_0": [
             {
                 "uid": "xor_0",
                 "pid": "a"
@@ -28,7 +18,7 @@
                 "pid": "a"
             }
         ],
-        "b": [
+        "b_0": [
             {
                 "uid": "xor_0",
                 "pid": "b"
@@ -92,7 +82,7 @@
         }
     ],
     "output": {
-        "sum": {
+        "sum_0": {
             "uid": "xor_1",
             "pid": "out"
         },

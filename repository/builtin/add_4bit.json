@@ -1,0 +1,97 @@
+{
+    "name": "add_4bit",
+    "nodes": {
+        "add_2bit_0": "add_2bit",
+        "add_2bit_1": "add_2bit"
+    },
+    "input": {
+        "a_0": [
+            {
+                "uid": "add_2bit_0",
+                "pid": "a_0"
+            }
+        ],
+        "a_1": [
+            {
+                "uid": "add_2bit_0",
+                "pid": "a_1"
+            }
+        ],
+        "a_2": [
+            {
+                "uid": "add_2bit_1",
+                "pid": "a_0"
+            }
+        ],
+        "a_3": [
+            {
+                "uid": "add_2bit_1",
+                "pid": "a_1"
+            }
+        ],
+        "b_0": [
+            {
+                "uid": "add_2bit_0",
+                "pid": "b_0"
+            }
+        ],
+        "b_1": [
+            {
+                "uid": "add_2bit_0",
+                "pid": "b_1"
+            }
+        ],
+        "b_2": [
+            {
+                "uid": "add_2bit_1",
+                "pid": "b_0"
+            }
+        ],
+        "b_3": [
+            {
+                "uid": "add_2bit_1",
+                "pid": "b_1"
+            }
+        ],
+        "c_in": [
+            {
+                "uid": "add_2bit_0",
+                "pid": "c_in"
+            }
+        ]
+    },
+    "edges": [
+        {
+            "from": {
+                "uid": "add_2bit_0",
+                "pid": "c_out"
+            },
+            "to": {
+                "uid": "add_2bit_1",
+                "pid": "c_in"
+            }
+        }
+    ],
+    "output": {
+        "sum_0": {
+            "uid": "add_2bit_0",
+            "pid": "sum_0"
+        },
+        "sum_1": {
+            "uid": "add_2bit_0",
+            "pid": "sum_1"
+        },
+        "sum_2": {
+            "uid": "add_2bit_1",
+            "pid": "sum_0"
+        },
+        "sum_3": {
+            "uid": "add_2bit_1",
+            "pid": "sum_1"
+        },
+        "c_out": {
+            "uid": "add_2bit_1",
+            "pid": "c_out"
+        }
+    }
+}

@@ -1,9 +1,12 @@
-package unit
+package repository
 
 import (
 	"embed"
 	"encoding/json"
 	"fmt"
+
+	"github.com/xinxiao/logico/blueprint"
+	"github.com/xinxiao/logico/unit"
 )
 
 const (
@@ -11,20 +14,20 @@ const (
 )
 
 var (
-	baseGates = map[string]Unit{
-		"not": &SingleOperandGate{Gate{n: "not"}},
-		"and": &DoubleOperandGate{Gate{n: "and"}},
-		"or":  &DoubleOperandGate{Gate{n: "or"}},
+	baseGates = map[string]unit.Unit{
+		"not": &unit.SingleOperandGate{Gate: unit.Gate{GateName: "not"}},
+		"and": &unit.DoubleOperandGate{Gate: unit.Gate{GateName: "and"}},
+		"or":  &unit.DoubleOperandGate{Gate: unit.Gate{GateName: "or"}},
 	}
 
 	//go:embed builtin/*.json
 	builtInCircuits embed.FS
 )
 
-type UnitRegistry map[string]Unit
+type UnitRepository map[string]unit.Unit
 
-func NewUnitRegistry() (UnitRegistry, error) {
-	ur := UnitRegistry(make(map[string]Unit))
+func NewUnitRepository() (UnitRepository, error) {
+	ur := UnitRepository(make(map[string]unit.Unit))
 	for n, u := range baseGates {
 		ur[n] = u
 	}
@@ -42,11 +45,12 @@ func NewUnitRegistry() (UnitRegistry, error) {
 			return nil, err
 		}
 
-		c := &Circuit{}
-		if err := json.Unmarshal(b, &c); err != nil {
-			return nil, err
+		cm := blueprint.CircuitBlueprint{}
+		if err := json.Unmarshal(b, &cm); err != nil {
+			return nil, fmt.Errorf("error parsing %s: %s", p, err)
 		}
 
+		c := unit.BuildCircuitFromBlueprint(cm)
 		if err := ur.RegisterUnit(c); err != nil {
 			return nil, err
 		}
@@ -55,7 +59,7 @@ func NewUnitRegistry() (UnitRegistry, error) {
 	return ur, nil
 }
 
-func (ur UnitRegistry) RegisterUnit(p Unit) error {
+func (ur UnitRepository) RegisterUnit(p unit.Unit) error {
 	n := p.Name()
 
 	if _, ok := ur[n]; ok {
@@ -66,7 +70,7 @@ func (ur UnitRegistry) RegisterUnit(p Unit) error {
 	return nil
 }
 
-func (ur UnitRegistry) GetUnit(n string) (Unit, error) {
+func (ur UnitRepository) GetUnit(n string) (unit.Unit, error) {
 	p, ok := ur[n]
 	if !ok {
 		return nil, fmt.Errorf("unit %s not registered", n)
@@ -74,7 +78,7 @@ func (ur UnitRegistry) GetUnit(n string) (Unit, error) {
 	return p, nil
 }
 
-func (ur UnitRegistry) RemoveUnit(n string) error {
+func (ur UnitRepository) RemoveUnit(n string) error {
 	if _, ok := ur[n]; !ok {
 		return fmt.Errorf("unit %s does not exist", n)
 	}

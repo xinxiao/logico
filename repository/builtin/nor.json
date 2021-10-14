@@ -1,23 +1,19 @@
 {
-    "name": "nand",
+    "name": "nor",
     "nodes": {
-        "and": {
-            "unit_type": "and"
-        },
-        "not": {
-            "unit_type": "not"
-        }
+        "or": "or",
+        "not": "not"
     },
     "input": {
         "a": [
             {
-                "uid": "and",
+                "uid": "or",
                 "pid": "a"
             }
         ],
         "b": [
             {
-                "uid": "and",
+                "uid": "or",
                 "pid": "b"
             }
         ]
@@ -25,7 +21,7 @@
     "edges": [
         {
             "from": {
-                "uid": "and",
+                "uid": "or",
                 "pid": "out"
             },
             "to": {

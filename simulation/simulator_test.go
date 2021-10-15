@@ -8,9 +8,9 @@ import (
 	"github.com/xinxiao/logico/repository"
 )
 
-const (
-	maxTestCasesSize = 10000
-)
+func MaskForBits(bs int) int64 {
+	return (1 << bs) - 1
+}
 
 func TestSimulate_Not(t *testing.T) {
 	ur, err := repository.NewUnitRepository()
@@ -217,33 +217,12 @@ func TestSimulate_If(t *testing.T) {
 	}
 }
 
-func getMaskForSize(bs int) int64 {
-	return (1 << bs) - 1
-}
-
-type flipTestCase struct {
-	v   int64
-	out int64
-}
-
-func generateFlipTestCases(bs int) []*flipTestCase {
-	m := getMaskForSize(bs)
-
-	l := make([]*flipTestCase, 0)
-	for i := int64(0); i <= m; i++ {
-		l = append(l, &flipTestCase{
-			v:   i,
-			out: (m ^ i) & m,
-		})
-
-		if len(l) >= maxTestCasesSize {
-			return l
-		}
+func TestSimulate_Flip(t *testing.T) {
+	type TestCase struct {
+		v   int64
+		out int64
 	}
-	return l
-}
 
-func testSimulate_Flip(t *testing.T, bs int) {
 	ur, err := repository.NewUnitRepository()
 	if err != nil {
 		t.Fatalf("failed to create unit repository: %s", err)
@@ -251,189 +230,167 @@ func testSimulate_Flip(t *testing.T, bs int) {
 
 	sim := NewSimulator(ur)
 
-	for i, tc := range generateFlipTestCases(bs) {
-		flip := fmt.Sprintf("flip_%dbit", bs)
+	for _, bs := range []int{
+		8,
+	} {
+		t.Run(fmt.Sprintf("%dbit", bs), func(t *testing.T) {
+			m := MaskForBits(bs)
 
-		in := map[string]bool{}
-		expected := map[string]bool{}
-
-		for i := 0; i < bs; i++ {
-			m := int64(0b1) << i
-
-			in[fmt.Sprintf("v_%d", i)] = (tc.v & m) != 0
-
-			expected[fmt.Sprintf("out_%d", i)] = (tc.out & m) != 0
-		}
-
-		got, err := sim.Simulate(flip, in)
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-
-		if !cmp.Equal(got, expected) {
-			t.Errorf("tc %d: %s(v: %d): %s", i, flip, tc.v, cmp.Diff(got, expected))
-		}
-	}
-}
-
-func TestSimulate_Flip8Bit(t *testing.T) {
-	testSimulate_Flip(t, 8)
-}
-
-func TestSimulate_Flip16Bit(t *testing.T) {
-	testSimulate_Flip(t, 16)
-}
-
-type negateTestCase struct {
-	v   int64
-	out int64
-}
-
-func generateNegateTestCases(bs int) []*negateTestCase {
-	l := []*negateTestCase{{v: 0, out: 0}}
-	for i := int64(1); i <= getMaskForSize(bs-1); i++ {
-		l = append(l,
-			&negateTestCase{
-				v:   i,
-				out: -i,
-			},
-			&negateTestCase{
-				v:   -i,
-				out: i,
-			})
-
-		if len(l) >= maxTestCasesSize {
-			return l
-		}
-	}
-	return l
-}
-
-func testSimulate_Negate(t *testing.T, bs int) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
-	sim := NewSimulator(ur)
-
-	for i, tc := range generateNegateTestCases(bs) {
-		negate := fmt.Sprintf("negate_%dbit", bs)
-
-		in := map[string]bool{}
-		expected := map[string]bool{}
-
-		for i := 0; i < bs; i++ {
-			m := int64(0b1) << i
-
-			in[fmt.Sprintf("v_%d", i)] = (tc.v & m) != 0
-
-			expected[fmt.Sprintf("out_%d", i)] = (tc.out & m) != 0
-		}
-
-		got, err := sim.Simulate(negate, in)
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-
-		if !cmp.Equal(got, expected) {
-			t.Errorf("tc %d: %s(v: %d): %s", i, negate, tc.v, cmp.Diff(got, expected))
-		}
-	}
-}
-
-func TestSimulate_Negate8Bit(t *testing.T) {
-	testSimulate_Negate(t, 8)
-}
-
-func TestSimulate_Negate16Bit(t *testing.T) {
-	testSimulate_Negate(t, 16)
-}
-
-type addTestCase struct {
-	a, b int64
-	cIn  bool
-	sum  int64
-	cOut bool
-}
-
-func generateAddTestCases(bs int) []*addTestCase {
-	m := getMaskForSize(bs)
-
-	l := make([]*addTestCase, 0)
-	for a := m; a >= 0; a-- {
-		for b := m; b >= 0; b-- {
-			s := a + b
-
-			l = append(l,
-				&addTestCase{
-					a: a, b: b, cIn: false,
-					sum: s & m, cOut: s > m,
-				},
-				&addTestCase{
-					a: a, b: b, cIn: true,
-					sum: (s + 1) & m, cOut: s >= m,
+			tcl := make([]*TestCase, 0)
+			for i := int64(0); i <= m; i++ {
+				tcl = append(tcl, &TestCase{
+					v:   i,
+					out: (m ^ i) & m,
 				})
+			}
 
-			if len(l) >= maxTestCasesSize {
-				return l
+			for i, tc := range tcl {
+				flip := fmt.Sprintf("flip_%dbit", bs)
+
+				in := map[string]bool{}
+				expected := map[string]bool{}
+
+				for i := 0; i < bs; i++ {
+					m := int64(0b1) << i
+
+					in[fmt.Sprintf("v_%d", i)] = (tc.v & m) != 0
+
+					expected[fmt.Sprintf("out_%d", i)] = (tc.out & m) != 0
+				}
+
+				got, err := sim.Simulate(flip, in)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+
+				if !cmp.Equal(got, expected) {
+					t.Errorf("tc %d: %s(v: %d): %s", i, flip, tc.v, cmp.Diff(got, expected))
+				}
+			}
+		})
+	}
+}
+
+func TestSimulate_Negate(t *testing.T) {
+	type TestCase struct {
+		v   int64
+		out int64
+	}
+
+	ur, err := repository.NewUnitRepository()
+	if err != nil {
+		t.Fatalf("failed to create unit repository: %s", err)
+	}
+
+	sim := NewSimulator(ur)
+
+	for _, bs := range []int{
+		8,
+	} {
+		t.Run(fmt.Sprintf("%dbit", bs), func(t *testing.T) {
+			tcl := []*TestCase{{v: 0, out: 0}}
+			for i := int64(1); i <= MaskForBits(bs-1); i++ {
+				tcl = append(tcl,
+					&TestCase{
+						v:   i,
+						out: -i,
+					},
+					&TestCase{
+						v:   -i,
+						out: i,
+					})
+			}
+
+			for i, tc := range tcl {
+				negate := fmt.Sprintf("negate_%dbit", bs)
+
+				in := map[string]bool{}
+				expected := map[string]bool{}
+
+				for i := 0; i < bs; i++ {
+					m := int64(0b1) << i
+
+					in[fmt.Sprintf("v_%d", i)] = (tc.v & m) != 0
+
+					expected[fmt.Sprintf("out_%d", i)] = (tc.out & m) != 0
+				}
+
+				got, err := sim.Simulate(negate, in)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+
+				if !cmp.Equal(got, expected) {
+					t.Errorf("tc %d: %s(v: %d): %s", i, negate, tc.v, cmp.Diff(got, expected))
+				}
+			}
+
+		})
+	}
+}
+
+func TestSimulate_Add(t *testing.T) {
+	type TestCase struct {
+		a, b int64
+		cIn  bool
+		sum  int64
+		cOut bool
+	}
+
+	ur, err := repository.NewUnitRepository()
+	if err != nil {
+		t.Fatalf("failed to create unit repository: %s", err)
+	}
+
+	sim := NewSimulator(ur)
+
+	for _, bs := range []int{
+		1, 2, 4,
+	} {
+		m := MaskForBits(bs)
+
+		tcl := make([]*TestCase, 0)
+		for a := m; a >= 0; a-- {
+			for b := m; b >= 0; b-- {
+				s := a + b
+
+				tcl = append(tcl,
+					&TestCase{
+						a: a, b: b, cIn: false,
+						sum: s & m, cOut: s > m,
+					},
+					&TestCase{
+						a: a, b: b, cIn: true,
+						sum: (s + 1) & m, cOut: s >= m,
+					})
 			}
 		}
+
+		t.Run(fmt.Sprintf("%dbit", bs), func(t *testing.T) {
+			for i, tc := range tcl {
+				add := fmt.Sprintf("add_%dbit", bs)
+
+				in := map[string]bool{"c_in": tc.cIn}
+				expected := map[string]bool{"c_out": tc.cOut}
+
+				for i := 0; i < bs; i++ {
+					m := int64(0b1) << i
+
+					in[fmt.Sprintf("a_%d", i)] = (tc.a & m) != 0
+					in[fmt.Sprintf("b_%d", i)] = (tc.b & m) != 0
+
+					expected[fmt.Sprintf("sum_%d", i)] = (tc.sum & m) != 0
+				}
+
+				got, err := sim.Simulate(add, in)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+
+				if !cmp.Equal(got, expected) {
+					t.Errorf("tc %d: %s(a: %d, b: %d, cIn: %t): %s", i, add, tc.a, tc.b, tc.cIn, cmp.Diff(got, expected))
+				}
+			}
+		})
 	}
-
-	return l
-}
-
-func testSimulate_Add(t *testing.T, bs int) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
-	sim := NewSimulator(ur)
-
-	for i, tc := range generateAddTestCases(bs) {
-		add := fmt.Sprintf("add_%dbit", bs)
-
-		in := map[string]bool{"c_in": tc.cIn}
-		expected := map[string]bool{"c_out": tc.cOut}
-
-		for i := 0; i < bs; i++ {
-			m := int64(0b1) << i
-
-			in[fmt.Sprintf("a_%d", i)] = (tc.a & m) != 0
-			in[fmt.Sprintf("b_%d", i)] = (tc.b & m) != 0
-
-			expected[fmt.Sprintf("sum_%d", i)] = (tc.sum & m) != 0
-		}
-
-		got, err := sim.Simulate(add, in)
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-
-		if !cmp.Equal(got, expected) {
-			t.Errorf("tc %d: %s(a: %d, b: %d, cIn: %t): %s", i, add, tc.a, tc.b, tc.cIn, cmp.Diff(got, expected))
-		}
-	}
-}
-
-func TestSimulate_Add1Bit(t *testing.T) {
-	testSimulate_Add(t, 1)
-}
-
-func TestSimulate_Add2Bit(t *testing.T) {
-	testSimulate_Add(t, 2)
-}
-
-func TestSimulate_Add4Bit(t *testing.T) {
-	testSimulate_Add(t, 4)
-}
-
-func TestSimulate_Add8Bit(t *testing.T) {
-	testSimulate_Add(t, 8)
-}
-
-func TestSimulate_Add16Bit(t *testing.T) {
-	testSimulate_Add(t, 16)
 }

@@ -1,59 +1,37 @@
 package repository
 
 import (
-	"embed"
-	"encoding/json"
 	"fmt"
 
 	"github.com/xinxiao/logico/blueprint"
 	"github.com/xinxiao/logico/unit"
 )
 
-const (
-	builtinPath = "builtin"
-)
-
 var (
-	baseGates = map[string]unit.Unit{
-		"not": &unit.SingleOperandGate{Gate: unit.Gate{GateName: "not"}},
-		"and": &unit.DoubleOperandGate{Gate: unit.Gate{GateName: "and"}},
-		"or":  &unit.DoubleOperandGate{Gate: unit.Gate{GateName: "or"}},
+	baseGates = []unit.Unit{
+		&unit.SingleOperandGate{Gate: unit.Gate{GateName: "not"}},
+		&unit.DoubleOperandGate{Gate: unit.Gate{GateName: "and"}},
+		&unit.DoubleOperandGate{Gate: unit.Gate{GateName: "or"}},
 	}
-
-	//go:embed builtin/*.json
-	builtInCircuits embed.FS
 )
 
 type UnitRepository map[string]unit.Unit
 
 func NewUnitRepository() (UnitRepository, error) {
 	ur := UnitRepository(make(map[string]unit.Unit))
-	for n, u := range baseGates {
-		ur[n] = u
+
+	for _, u := range baseGates {
+		ur.RegisterUnit(u)
 	}
 
-	dir, err := builtInCircuits.ReadDir(builtinPath)
+	cbpl, err := blueprint.LoadBuiltinCircuitBlueprint()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, f := range dir {
-		p := fmt.Sprintf("%s/%s", builtinPath, f.Name())
-
-		b, err := builtInCircuits.ReadFile(p)
-		if err != nil {
-			return nil, err
-		}
-
-		cm := blueprint.CircuitBlueprint{}
-		if err := json.Unmarshal(b, &cm); err != nil {
-			return nil, fmt.Errorf("error parsing %s: %s", p, err)
-		}
-
-		c := unit.BuildCircuitFromBlueprint(cm)
-		if err := ur.RegisterUnit(c); err != nil {
-			return nil, err
-		}
+	for _, cbp := range cbpl {
+		c := unit.BuildCircuitFromBlueprint(cbp)
+		ur.RegisterUnit(c)
 	}
 
 	return ur, nil

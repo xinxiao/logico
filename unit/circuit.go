@@ -1,60 +1,62 @@
 package unit
 
 import (
+	"fmt"
+
 	"github.com/xinxiao/logico/blueprint"
 )
 
 type Circuit struct {
-	CircuitName  string
-	Units        map[string]string
-	InputPins    map[blueprint.CircuitPin]string
-	ConstantPins map[blueprint.CircuitPin]bool
-	Edges        map[blueprint.CircuitPin]blueprint.CircuitPin
-	OutputPins   map[string]blueprint.CircuitPin
+	n    string
+	um   map[string]string
+	in   map[blueprint.CircuitPin]string
+	cst  map[blueprint.CircuitPin]bool
+	edge map[blueprint.CircuitPin]blueprint.CircuitPin
+	out  map[string]blueprint.CircuitPin
 }
 
-func BuildCircuitFromBlueprint(cbp blueprint.CircuitBlueprint) *Circuit {
+func BuildCircuitFromBlueprint(cbp *blueprint.CircuitBlueprint) *Circuit {
 	c := &Circuit{
-		CircuitName:  cbp.Name,
-		Units:        cbp.Nodes,
-		InputPins:    make(map[blueprint.CircuitPin]string),
-		ConstantPins: make(map[blueprint.CircuitPin]bool),
-		Edges:        make(map[blueprint.CircuitPin]blueprint.CircuitPin),
-		OutputPins:   make(map[string]blueprint.CircuitPin),
+		n:    cbp.Name,
+		um:   cbp.Nodes,
+		in:   make(map[blueprint.CircuitPin]string),
+		cst:  make(map[blueprint.CircuitPin]bool),
+		edge: make(map[blueprint.CircuitPin]blueprint.CircuitPin),
+		out:  make(map[string]blueprint.CircuitPin),
 	}
 
 	for n, ipl := range cbp.Inputs {
 		for _, ip := range ipl {
-			c.InputPins[ip] = n
+			c.in[ip] = n
 		}
 	}
 
 	for _, cp := range cbp.AlwaysOn {
-		c.ConstantPins[cp] = true
+		c.cst[cp] = true
 	}
 
 	for _, cp := range cbp.AlwaysOff {
-		c.ConstantPins[cp] = false
+		c.cst[cp] = false
 	}
 
 	for _, e := range cbp.Edges {
-		c.Edges[e.To] = e.From
+		c.edge[e.To] = e.From
 	}
 
 	for n, op := range cbp.Outputs {
-		c.OutputPins[n] = op
+		c.out[n] = op
 	}
 
 	return c
 }
 
 func (c *Circuit) Name() string {
-	return c.CircuitName
+	return c.n
 }
 
 func (c *Circuit) Input() []string {
 	im := make(map[string]bool)
-	for _, in := range c.InputPins {
+	for _, in := range c.in {
 		im[in] = true
 	}
 
@@ -67,6 +69,43 @@ func (c *Circuit) Input() []string {
 
 func (c *Circuit) Output() []string {
 	out := make([]string, 0)
-
+	for n := range c.out {
+		out = append(out, n)
+	}
 	return out
+}
+
+func (c *Circuit) GetUnitType(uid string) (string, error) {
+	if u, ok := c.um[uid]; ok {
+		return u, nil
+	}
+	return "", fmt.Errorf("no unit named %s", uid)
+}
+
+func (c *Circuit) AssignInputPinWithValue(args map[string]bool) map[blueprint.CircuitPin]bool {
+	m := make(map[blueprint.CircuitPin]bool)
+
+	for p, n := range c.in {
+		m[p] = args[n]
+	}
+
+	for p, v := range c.cst {
+		m[p] = v
+	}
+
+	return m
+}
+
+func (c *Circuit) GetFeedingInput(p blueprint.CircuitPin) (blueprint.CircuitPin, error) {
+	if lp, ok := c.edge[p]; ok {
+		return lp, nil
+	}
+	return blueprint.CircuitPin{}, fmt.Errorf("%s is not linked to any other pin", p)
+}
+
+func (c *Circuit) GetOutputPins(n string) (blueprint.CircuitPin, error) {
+	if p, ok := c.out[n]; ok {
+		return p, nil
+	}
+	return blueprint.CircuitPin{}, fmt.Errorf("no output pin named %s", n)
 }

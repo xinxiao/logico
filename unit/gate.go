@@ -1,8 +1,12 @@
 package unit
 
 const (
-	GateOutput = "out"
+	gateOutputName = "out"
 )
+
+func GateOutput(v bool) map[string]bool {
+	return map[string]bool{gateOutputName: v}
+}
 
 type Gate struct {
 	GateName string
@@ -13,7 +17,7 @@ func (g *Gate) Name() string {
 }
 
 func (g *Gate) Output() []string {
-	return []string{GateOutput}
+	return []string{gateOutputName}
 }
 
 type SingleOperandGate struct {

@@ -49,7 +49,7 @@ func (bs *Simulator) simulateUnit(u unit.Unit, args map[string]bool) (map[string
 		v := args[in[0]]
 		switch u.Name() {
 		case "not":
-			return map[string]bool{unit.GateOutput: !v}, nil
+			return unit.GateOutput(!v), nil
 		default:
 			return nil, fmt.Errorf("unknown single operand gate %s", u.Name())
 		}
@@ -57,9 +57,9 @@ func (bs *Simulator) simulateUnit(u unit.Unit, args map[string]bool) (map[string
 		a, b := args[in[0]], args[in[1]]
 		switch u.Name() {
 		case "and":
-			return map[string]bool{unit.GateOutput: a && b}, nil
+			return unit.GateOutput(a && b), nil
 		case "or":
-			return map[string]bool{unit.GateOutput: a || b}, nil
+			return unit.GateOutput(a || b), nil
 		default:
 			return nil, fmt.Errorf("unknown double operand gate %s", u.Name())
 		}
@@ -70,44 +70,35 @@ func (bs *Simulator) simulateUnit(u unit.Unit, args map[string]bool) (map[string
 	}
 }
 
-type SimulationTracker struct {
-	c   *unit.Circuit
+type simulationTracker struct {
+	utf func(string) (string, error)
+	fpm func(blueprint.CircuitPin) (blueprint.CircuitPin, error)
 	in  map[blueprint.CircuitPin]bool
 	uvm map[string]map[string]bool
 }
 
-func NewSimulationTracker(c *unit.Circuit, args map[string]bool) *SimulationTracker {
-	st := &SimulationTracker{
-		c:   c,
-		in:  make(map[blueprint.CircuitPin]bool),
+func newSimulationTracker(c *unit.Circuit, args map[string]bool) *simulationTracker {
+	return &simulationTracker{
+		utf: c.GetUnitType,
+		fpm: c.GetFeedingInput,
+		in:  c.AssignInputPinWithValue(args),
 		uvm: make(map[string]map[string]bool),
 	}
-
-	for p, n := range c.InputPins {
-		st.in[p] = args[n]
-	}
-
-	return st
 }
 
-func (st *SimulationTracker) input(bs *Simulator, p blueprint.CircuitPin) (bool, error) {
-
-	if v, ok := st.c.ConstantPins[p]; ok {
-		return v, nil
-	}
-
+func (st *simulationTracker) findPinInput(bs *Simulator, p blueprint.CircuitPin) (bool, error) {
 	if v, ok := st.in[p]; ok {
 		return v, nil
 	}
 
-	if l, ok := st.c.Edges[p]; ok {
-		return st.output(bs, l)
+	if l, err := st.fpm(p); err == nil {
+		return st.finPinOutput(bs, l)
 	}
 
 	return false, fmt.Errorf("input pin %s not found", p)
 }
 
-func (st *SimulationTracker) output(bs *Simulator, p blueprint.CircuitPin) (bool, error) {
+func (st *simulationTracker) finPinOutput(bs *Simulator, p blueprint.CircuitPin) (bool, error) {
 	if om, ok := st.uvm[p.UnitId]; ok {
 		if v, ok := om[p.PinId]; ok {
 			return v, nil
@@ -115,9 +106,9 @@ func (st *SimulationTracker) output(bs *Simulator, p blueprint.CircuitPin) (bool
 		return false, fmt.Errorf("output pin %s not found", p)
 	}
 
-	ut, ok := st.c.Units[p.UnitId]
-	if !ok {
-		return false, fmt.Errorf("cannot find unit of type %s", p.UnitId)
+	ut, err := st.utf(p.UnitId)
+	if err != nil {
+		return false, err
 	}
 
 	u, err := bs.ur.GetUnit(ut)
@@ -127,7 +118,7 @@ func (st *SimulationTracker) output(bs *Simulator, p blueprint.CircuitPin) (bool
 
 	args := make(map[string]bool)
 	for _, in := range u.Input() {
-		v, err := st.input(bs, blueprint.CircuitPin{UnitId: p.UnitId, PinId: in})
+		v, err := st.findPinInput(bs, blueprint.CircuitPin{UnitId: p.UnitId, PinId: in})
 		if err != nil {
 			return false, err
 		}
@@ -140,15 +131,20 @@ func (st *SimulationTracker) output(bs *Simulator, p blueprint.CircuitPin) (bool
 	}
 	st.uvm[p.UnitId] = out
 
-	return st.output(bs, p)
+	return st.finPinOutput(bs, p)
 }
 
 func (bs *Simulator) simulateCircuit(c *unit.Circuit, args map[string]bool) (map[string]bool, error) {
-	st := NewSimulationTracker(c, args)
+	st := newSimulationTracker(c, args)
 
 	out := make(map[string]bool)
-	for on, op := range c.OutputPins {
-		ov, err := st.output(bs, op)
+	for _, on := range c.Output() {
+		op, err := c.GetOutputPins(on)
+		if err != nil {
+			return nil, err
+		}
+
+		ov, err := st.finPinOutput(bs, op)
 		if err != nil {
 			return nil, err
 		}

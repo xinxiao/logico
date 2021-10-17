@@ -1,0 +1,3 @@
+local add = import "add.lib";
+
+add.MultibitAddConstant(8, 1)

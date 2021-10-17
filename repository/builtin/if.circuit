@@ -1,0 +1,32 @@
+local pin = import "@pin.lib";
+local connector = import "@connector.lib";
+
+{
+    "name": "if",
+
+    "nodes": {
+        "not": "not",
+        "and_0": "and",
+        "and_1": "and",
+        "or": "or",
+    },
+
+    "inputs": {
+        "a": [pin.Pin("and_0", "a")],
+        "b": [pin.Pin("and_1", "a")],
+        "cond": [
+            pin.Pin("and_0", "b"),
+            pin.Pin("not", "v"),
+        ],
+    },
+
+    "connectors": [
+        connector.Edge(pin.Pin("not", "out"), pin.Pin("and_1", "b")),
+        connector.Edge(pin.Pin("and_0", "out"), pin.Pin("or", "a")),
+        connector.Edge(pin.Pin("and_1", "out"), pin.Pin("or", "b")),
+    ],
+
+    "outputs": {
+        "out": pin.Pin("or", "out"),
+    },
+}

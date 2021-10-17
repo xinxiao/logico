@@ -13,11 +13,7 @@ func MaskForBits(bs int) int64 {
 }
 
 func TestSimulate_Not(t *testing.T) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for i, tc := range []struct {
@@ -40,11 +36,7 @@ func TestSimulate_Not(t *testing.T) {
 }
 
 func TestSimulate_And(t *testing.T) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for i, tc := range []struct {
@@ -69,11 +61,7 @@ func TestSimulate_And(t *testing.T) {
 }
 
 func TestSimulate_Or(t *testing.T) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for i, tc := range []struct {
@@ -98,11 +86,7 @@ func TestSimulate_Or(t *testing.T) {
 }
 
 func TestSimulate_Nand(t *testing.T) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for i, tc := range []struct {
@@ -127,11 +111,7 @@ func TestSimulate_Nand(t *testing.T) {
 }
 
 func TestSimulate_Nor(t *testing.T) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for i, tc := range []struct {
@@ -156,11 +136,7 @@ func TestSimulate_Nor(t *testing.T) {
 }
 
 func TestSimulate_Xor(t *testing.T) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for i, tc := range []struct {
@@ -185,11 +161,7 @@ func TestSimulate_Xor(t *testing.T) {
 }
 
 func TestSimulate_If(t *testing.T) {
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for i, tc := range []struct {
@@ -223,15 +195,11 @@ func TestSimulate_Flip(t *testing.T) {
 		out int64
 	}
 
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for _, bs := range []int{
-		8,
+		4, 8,
 	} {
 		t.Run(fmt.Sprintf("%dbit", bs), func(t *testing.T) {
 			m := MaskForBits(bs)
@@ -277,15 +245,11 @@ func TestSimulate_Negate(t *testing.T) {
 		out int64
 	}
 
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for _, bs := range []int{
-		8,
+		4, 8,
 	} {
 		t.Run(fmt.Sprintf("%dbit", bs), func(t *testing.T) {
 			tcl := []*TestCase{{v: 0, out: 0}}
@@ -337,11 +301,7 @@ func TestSimulate_Add(t *testing.T) {
 		cOut bool
 	}
 
-	ur, err := repository.NewUnitRepository()
-	if err != nil {
-		t.Fatalf("failed to create unit repository: %s", err)
-	}
-
+	ur := repository.NewUnitRepository()
 	sim := NewSimulator(ur)
 
 	for _, bs := range []int{
@@ -392,5 +352,63 @@ func TestSimulate_Add(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSimulate_AddConstant(t *testing.T) {
+	type TestCase struct {
+		a    int64
+		sum  int64
+		cOut bool
+	}
+
+	ur := repository.NewUnitRepository()
+	sim := NewSimulator(ur)
+
+	for _, c := range []int64{
+		1, 4,
+	} {
+		for _, bs := range []int{
+			4,
+		} {
+			m := MaskForBits(bs)
+
+			tcl := make([]*TestCase, 0)
+			for a := m; a >= 0; a-- {
+				for b := m; b >= 0; b-- {
+					s := a + c
+					tcl = append(tcl,
+						&TestCase{
+							a: a, sum: s & m, cOut: s > m,
+						})
+				}
+			}
+
+			t.Run(fmt.Sprintf("%d_%dbit", c, bs), func(t *testing.T) {
+				for i, tc := range tcl {
+					add := fmt.Sprintf("add%d_%dbit", c, bs)
+
+					in := map[string]bool{}
+					expected := map[string]bool{"c_out": tc.cOut}
+
+					for i := 0; i < bs; i++ {
+						m := int64(0b1) << i
+
+						in[fmt.Sprintf("a_%d", i)] = (tc.a & m) != 0
+
+						expected[fmt.Sprintf("sum_%d", i)] = (tc.sum & m) != 0
+					}
+
+					got, err := sim.Simulate(add, in)
+					if err != nil {
+						t.Fatalf("unexpected error: %s", err)
+					}
+
+					if !cmp.Equal(got, expected) {
+						t.Errorf("tc %d: %s(a: %d): %s", i, add, tc.a, cmp.Diff(got, expected))
+					}
+				}
+			})
+		}
 	}
 }

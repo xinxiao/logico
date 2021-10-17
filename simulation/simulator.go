@@ -9,10 +9,10 @@ import (
 )
 
 type Simulator struct {
-	ur repository.UnitRepository
+	ur *repository.UnitRepository
 }
 
-func NewSimulator(ur repository.UnitRepository) *Simulator {
+func NewSimulator(ur *repository.UnitRepository) *Simulator {
 	return &Simulator{ur}
 }
 
@@ -81,7 +81,7 @@ func newSimulationTracker(c *unit.Circuit, args map[string]bool) *simulationTrac
 	return &simulationTracker{
 		utf: c.GetUnitType,
 		fpm: c.GetFeedingInput,
-		in:  c.AssignInputPinWithValue(args),
+		in:  c.AssignInputValue(args),
 		uvm: make(map[string]map[string]bool),
 	}
 }
@@ -92,13 +92,13 @@ func (st *simulationTracker) findPinInput(bs *Simulator, p blueprint.CircuitPin)
 	}
 
 	if l, err := st.fpm(p); err == nil {
-		return st.finPinOutput(bs, l)
+		return st.findPinOutput(bs, l)
 	}
 
 	return false, fmt.Errorf("input pin %s not found", p)
 }
 
-func (st *simulationTracker) finPinOutput(bs *Simulator, p blueprint.CircuitPin) (bool, error) {
+func (st *simulationTracker) findPinOutput(bs *Simulator, p blueprint.CircuitPin) (bool, error) {
 	if om, ok := st.uvm[p.UnitId]; ok {
 		if v, ok := om[p.PinId]; ok {
 			return v, nil
@@ -131,7 +131,7 @@ func (st *simulationTracker) finPinOutput(bs *Simulator, p blueprint.CircuitPin)
 	}
 	st.uvm[p.UnitId] = out
 
-	return st.finPinOutput(bs, p)
+	return st.findPinOutput(bs, p)
 }
 
 func (bs *Simulator) simulateCircuit(c *unit.Circuit, args map[string]bool) (map[string]bool, error) {
@@ -144,7 +144,7 @@ func (bs *Simulator) simulateCircuit(c *unit.Circuit, args map[string]bool) (map
 			return nil, err
 		}
 
-		ov, err := st.finPinOutput(bs, op)
+		ov, err := st.findPinOutput(bs, op)
 		if err != nil {
 			return nil, err
 		}

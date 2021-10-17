@@ -1,0 +1,24 @@
+local pin = import "@pin.lib";
+local util = import "@util.lib";
+
+{
+    MultibitFlip(number_of_bits)::
+        {
+            "name": util.MultibitCircuitName("flip")(number_of_bits),
+
+            "nodes": {
+                ["not_%d" % i]: "not"
+                for i in std.range(0, number_of_bits - 1)
+            },
+
+            "inputs": pin.InputBus("v", number_of_bits, [
+                [pin.Pin("not_%d" % i, "v")]
+                for i in std.range(0, number_of_bits - 1)
+            ]),
+
+            "outputs": pin.OutputBus("out", number_of_bits, [
+                pin.Pin("not_%d" % i, "out")
+                for i in std.range(0, number_of_bits - 1)
+            ]),
+        },
+}

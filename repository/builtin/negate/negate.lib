@@ -1,0 +1,32 @@
+local pin = import "@pin.lib";
+local connector = import "@connector.lib";
+local util = import "@util.lib";
+
+{
+    MultibitNegater(number_of_bits)::
+        local add = util.MultibitCircuitName("add")(number_of_bits);
+        local flip = util.MultibitCircuitName("flip")(number_of_bits);
+        local negate = util.MultibitCircuitName("negate")(number_of_bits);
+
+        {
+            "name": negate,
+
+            "nodes": {
+                [add]: add,
+                [flip]: flip,
+            },
+
+            "inputs": pin.InputBus("v", number_of_bits, [
+                [p]
+                for p in pin.PinBus(flip, "v", number_of_bits)
+            ]),
+
+            "always_off": pin.PinBusRange(add, "b", 1, number_of_bits) + [pin.Pin(add, "c_in")],
+            
+            "always_on": [pin.Pin(add, "b_0")],
+
+            "connectors": connector.Row(pin.PinBus(flip, "out", number_of_bits), pin.PinBus(add, "a", number_of_bits)),
+
+            "outputs": pin.OutputBus("out", number_of_bits, pin.PinBus(add, "sum", number_of_bits)),
+        },
+}

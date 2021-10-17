@@ -1,0 +1,41 @@
+{
+    Pin(uid, pid)::
+        {  
+            "uid": uid, 
+            "pid": pid
+        },
+    
+    BusPinID(bus, i)::
+        "%s_%d" % [bus, i],
+
+    PinBus(uid, pid, size)::
+        [
+            self.Pin(uid, self.BusPinID(pid, i)),
+            for i in std.range(0, size - 1)
+        ],
+    
+    PinBusRange(uid, pid, start, end)::
+        [
+            self.Pin(uid, self.BusPinID(pid, i)),
+            for i in std.range(start, end)
+        ],
+    
+    InputBus(name, size, input_pin_groups)::
+        assert std.length(input_pin_groups) == size :
+            "InputBus: number of input pin groups must match bus size";
+
+        {   
+            [self.BusPinID(name, i)]: input_pin_groups[i]
+            for i in std.range(0, size - 1)
+        },
+    
+
+    OutputBus(name, size, output_pins)::
+        assert std.length(output_pins) == size :
+            "OutputBus: number of output pins must match bus size";
+
+        {   
+            [self.BusPinID(name, i)]: output_pins[i]
+            for i in std.range(0, size - 1)
+        },
+}

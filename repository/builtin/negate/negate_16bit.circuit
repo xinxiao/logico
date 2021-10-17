@@ -1,0 +1,3 @@
+local negate = import "negate.lib";
+
+negate.MultibitNegater(16)

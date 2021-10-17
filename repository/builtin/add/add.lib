@@ -1,0 +1,96 @@
+local pin = import "@pin.lib";
+local connector = import "@connector.lib";
+local util = import "@util.lib";
+
+{
+    MultibitAdd(number_of_bits)::
+        local name_add = util.MultibitCircuitName("add");
+
+        local half_bits = number_of_bits / 2;
+        local half_bits_add_name = name_add(half_bits);
+
+        local half_bits_add_0 = half_bits_add_name + "_0";
+        local half_bits_add_1 = half_bits_add_name + "_1";
+
+        {
+            "name": name_add(number_of_bits),
+
+            "nodes": {
+                [half_bits_add_0]: half_bits_add_name,
+                [half_bits_add_1]: half_bits_add_name,
+            },
+
+            "inputs": 
+                pin.InputBus(
+                    "a", number_of_bits, [
+                        [p]
+                        for p in 
+                            pin.PinBus(half_bits_add_0, "a", half_bits) +
+                            pin.PinBus(half_bits_add_1, "a", half_bits)
+                    ]) +
+                pin.InputBus(
+                    "b", number_of_bits, [
+                        [p]
+                        for p in 
+                            pin.PinBus(half_bits_add_0, "b", half_bits) +
+                            pin.PinBus(half_bits_add_1, "b", half_bits)
+                    ]) +
+                {
+                    "c_in": [pin.Pin(half_bits_add_0, "c_in")],
+                },
+
+            "connectors": [
+                connector.Edge(
+                    pin.Pin(half_bits_add_0, "c_out"), 
+                    pin.Pin(half_bits_add_1, "c_in"))
+            ],
+
+            "outputs": 
+                pin.OutputBus(
+                    "sum", number_of_bits, 
+                    pin.PinBus(half_bits_add_0, "sum", half_bits) +
+                    pin.PinBus(half_bits_add_1, "sum", half_bits)) + 
+                {
+                    "c_out": pin.Pin(half_bits_add_1, "c_out"),
+                },
+        },
+
+    
+    MultibitAddConstant(number_of_bits, n)::
+        local add = util.MultibitCircuitName("add")(number_of_bits);
+
+        local bits = util.ToBitArray(n, number_of_bits);
+
+        {
+            "name": util.MultibitCircuitName("add%d" % n)(number_of_bits),
+
+            "nodes": {
+                [add]: add,
+            },
+
+            "inputs": 
+                pin.InputBus(
+                    "a", number_of_bits, [
+                        [p]
+                        for p in pin.PinBus(add, "a", number_of_bits)
+                    ]),
+
+            "always_off": [pin.Pin(add, "c_in")] + [
+                pin.Pin(add, "b_%d" % i)
+                for i in std.range(0, number_of_bits - 1) if bits[i] == 0
+            ],
+
+            "always_on": [
+                pin.Pin(add, "b_%d" % i)
+                for i in std.range(0, number_of_bits - 1) if bits[i] == 1
+            ],
+
+            "outputs": 
+                pin.OutputBus(
+                    "sum", number_of_bits, 
+                    pin.PinBus(add, "sum", number_of_bits)) + 
+                {
+                    "c_out": pin.Pin(add, "c_out"),
+                },
+        },
+}

@@ -1,0 +1,37 @@
+local pin = import "@pin.lib";
+local connector = import "@connector.lib";
+
+{
+    "name": "add_1bit",
+    "nodes": {
+        "xor_0": "xor",
+        "xor_1": "xor",
+        "and_0": "and",
+        "and_1": "and",
+        "or": "or",
+    },
+    "inputs": {
+        "a_0": [
+            pin.Pin("xor_0", "a"),
+            pin.Pin("and_1", "a"),
+        ],
+        "b_0": [
+            pin.Pin("xor_0", "b"),
+            pin.Pin("and_1", "b"),
+        ],
+        "c_in": [
+            pin.Pin("xor_1", "b"),
+            pin.Pin("and_0", "a"),
+        ]
+    },
+    "connectors": [
+        connector.Edge(pin.Pin("xor_0", "out"), pin.Pin("xor_1", "a")),
+        connector.Edge(pin.Pin("xor_0", "out"), pin.Pin("and_0", "b")),
+        connector.Edge(pin.Pin("and_0", "out"), pin.Pin("or", "a")),
+        connector.Edge(pin.Pin("and_1", "out"), pin.Pin("or", "b")),
+    ],
+    "outputs": {
+        "sum_0": pin.Pin("xor_1", "out"),
+        "c_out": pin.Pin("or", "out"),
+    }
+}

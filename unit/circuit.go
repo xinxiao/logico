@@ -17,7 +17,7 @@ type Circuit struct {
 
 func BuildCircuitFromBlueprint(cbp *blueprint.CircuitBlueprint) *Circuit {
 	c := &Circuit{
-		n:    cbp.Name,
+		n:    cbp.CircuitName,
 		um:   cbp.Nodes,
 		in:   make(map[blueprint.CircuitPin]string),
 		cst:  make(map[blueprint.CircuitPin]bool),
@@ -39,7 +39,7 @@ func BuildCircuitFromBlueprint(cbp *blueprint.CircuitBlueprint) *Circuit {
 		c.cst[cp] = false
 	}
 
-	for _, e := range cbp.Edges {
+	for _, e := range cbp.Connectors {
 		c.edge[e.To] = e.From
 	}
 
@@ -82,7 +82,7 @@ func (c *Circuit) GetUnitType(uid string) (string, error) {
 	return "", fmt.Errorf("no unit named %s", uid)
 }
 
-func (c *Circuit) AssignInputPinWithValue(args map[string]bool) map[blueprint.CircuitPin]bool {
+func (c *Circuit) AssignInputValue(args map[string]bool) map[blueprint.CircuitPin]bool {
 	m := make(map[blueprint.CircuitPin]bool)
 
 	for p, n := range c.in {

@@ -1,0 +1,9 @@
+{   
+    MultibitCircuitName(base)::
+        function(number_of_bits) "%s_%dbit" % [base, number_of_bits],
+    
+    ToBitArray(n, number_of_bits)::
+        if number_of_bits == 0
+            then []
+            else [n & 1] + self.ToBitArray(n >> 1, number_of_bits - 1),
+}

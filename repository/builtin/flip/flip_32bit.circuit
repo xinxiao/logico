@@ -1,0 +1,3 @@
+local flip = import "flip.lib";
+
+flip.MultibitFlip(32)

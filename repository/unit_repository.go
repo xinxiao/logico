@@ -15,25 +15,25 @@ const (
 )
 
 var (
+	gateProviders = map[string]func() unit.Unit{
+		"not": func() unit.Unit { return &unit.Not{} },
+		"and": func() unit.Unit { return &unit.And{} },
+		"or":  func() unit.Unit { return &unit.Or{} },
+	}
+
 	//go:embed builtin/*.circuit
 	//go:embed builtin/**/*.lib
 	//go:embed builtin/**/*.circuit
-	builtInCircuitSource embed.FS
-
-	baseGates = []unit.Unit{
-		&unit.Not{},
-		&unit.And{},
-		&unit.Or{},
-	}
+	prebuiltCircuitSource embed.FS
 
 	prebuiltCircuits, _ = LoadPrebuiltCircuit()
 )
 
 func LoadPrebuiltCircuit() (map[string]*blueprint.CircuitBlueprint, error) {
-	cbpp := blueprint.NewCircuitBlueprintParser(builtInCircuitSource)
+	cbpp := blueprint.NewCircuitBlueprintParser(prebuiltCircuitSource)
 
 	m := make(map[string]*blueprint.CircuitBlueprint)
-	err := fs.WalkDir(builtInCircuitSource, builtinPath, func(p string, f fs.DirEntry, err error) error {
+	err := fs.WalkDir(prebuiltCircuitSource, builtinPath, func(p string, f fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -59,41 +59,30 @@ func LoadPrebuiltCircuit() (map[string]*blueprint.CircuitBlueprint, error) {
 }
 
 type UnitRepository struct {
-	cm  map[string]unit.Unit
 	bpr BlueprintRepository
 }
 
 func NewUnitRepository() *UnitRepository {
-	ur := &UnitRepository{
-		cm:  make(map[string]unit.Unit),
+	return &UnitRepository{
 		bpr: &emptyBlueprintRepository{},
 	}
-
-	for _, u := range baseGates {
-		ur.cm[u.Name()] = u
-	}
-
-	return ur
 }
 
 func (ur *UnitRepository) LinkBlueprintRepository(bpr BlueprintRepository) {
 	ur.bpr = bpr
 }
 
-func (ur *UnitRepository) CheckOutBlueprint(n string) (*blueprint.CircuitBlueprint, error) {
-	if cbp, ok := prebuiltCircuits[n]; ok {
-		return cbp, nil
-	}
-	return ur.bpr.CheckOutBlueprint(n)
-}
-
 func (ur *UnitRepository) GetUnit(n string) (unit.Unit, error) {
-	if p, ok := ur.cm[n]; ok {
-		return p, nil
+	if u, ok := gateProviders[n]; ok {
+		return u(), nil
 	}
 
-	if bp, err := ur.CheckOutBlueprint(n); err == nil {
-		return ur.BuildCircuitFromBlueprint(bp)
+	if cbp, ok := prebuiltCircuits[n]; ok {
+		return ur.BuildCircuitFromBlueprint(cbp)
+	}
+
+	if cbp, err := ur.bpr.CheckOutBlueprint(n); err == nil {
+		return ur.BuildCircuitFromBlueprint(cbp)
 	}
 
 	return nil, fmt.Errorf("unit %s not found", n)
@@ -110,11 +99,11 @@ func (ur *UnitRepository) BuildCircuitFromBlueprint(cbp *blueprint.CircuitBluepr
 	}
 
 	for uid, ut := range cbp.Nodes {
-		if u, err := ur.GetUnit(ut); err != nil {
+		u, err := ur.GetUnit(ut)
+		if err != nil {
 			return nil, err
-		} else {
-			c.UnitMap[uid] = u
 		}
+		c.UnitMap[uid] = u
 	}
 
 	for n, ipl := range cbp.Inputs {

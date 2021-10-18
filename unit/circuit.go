@@ -2,61 +2,98 @@ package unit
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/xinxiao/logico/blueprint"
 )
 
-type Circuit struct {
-	n    string
-	um   map[string]string
-	in   map[blueprint.CircuitPin]string
-	cst  map[blueprint.CircuitPin]bool
-	edge map[blueprint.CircuitPin]blueprint.CircuitPin
-	out  map[string]blueprint.CircuitPin
+type CircuitSimulationTracker struct {
+	Circuit          *Circuit
+	InputValue       map[string]bool
+	UnitValueMap     map[string]map[string]bool
+	UnitValueMapLock sync.RWMutex
 }
 
-func BuildCircuitFromBlueprint(cbp *blueprint.CircuitBlueprint) *Circuit {
-	c := &Circuit{
-		n:    cbp.CircuitName,
-		um:   cbp.Nodes,
-		in:   make(map[blueprint.CircuitPin]string),
-		cst:  make(map[blueprint.CircuitPin]bool),
-		edge: make(map[blueprint.CircuitPin]blueprint.CircuitPin),
-		out:  make(map[string]blueprint.CircuitPin),
+func (cst *CircuitSimulationTracker) ReadUnitValue(uid string) (map[string]bool, bool) {
+	cst.UnitValueMapLock.RLock()
+	defer cst.UnitValueMapLock.RUnlock()
+
+	m, ok := cst.UnitValueMap[uid]
+	return m, ok
+}
+
+func (cst *CircuitSimulationTracker) SaveUnitValue(uid string, vm map[string]bool) {
+	cst.UnitValueMapLock.Lock()
+	defer cst.UnitValueMapLock.Unlock()
+
+	cst.UnitValueMap[uid] = vm
+}
+
+func (cst *CircuitSimulationTracker) GetInputValue(p blueprint.CircuitPin) (bool, error) {
+	if v, ok := cst.Circuit.ConstantPins[p]; ok {
+		return v, nil
 	}
 
-	for n, ipl := range cbp.Inputs {
-		for _, ip := range ipl {
-			c.in[ip] = n
+	if n, ok := cst.Circuit.InputPins[p]; ok {
+		if v, ok := cst.InputValue[n]; ok {
+			return v, nil
 		}
 	}
 
-	for _, cp := range cbp.AlwaysOn {
-		c.cst[cp] = true
+	if fp, ok := cst.Circuit.Connectors[p]; ok {
+		return cst.GetOutputValue(fp)
 	}
 
-	for _, cp := range cbp.AlwaysOff {
-		c.cst[cp] = false
+	return false, fmt.Errorf("cannot find input value for pin %s", p)
+}
+
+func (cst *CircuitSimulationTracker) GetOutputValue(p blueprint.CircuitPin) (bool, error) {
+	if m, ok := cst.ReadUnitValue(p.UnitId); ok {
+		if v, ok := m[p.PinId]; ok {
+			return v, nil
+		}
+		return false, fmt.Errorf("cannot find output value for pin %s", p)
 	}
 
-	for _, e := range cbp.Connectors {
-		c.edge[e.To] = e.From
+	u, ok := cst.Circuit.UnitMap[p.UnitId]
+	if !ok {
+		return false, fmt.Errorf("cannot find unit %s", p.UnitId)
 	}
 
-	for n, op := range cbp.Outputs {
-		c.out[n] = op
+	im := make(map[string]bool)
+	for _, in := range u.Input() {
+		iv, err := cst.GetInputValue(blueprint.CircuitPin{UnitId: p.UnitId, PinId: in})
+		if err != nil {
+			return false, err
+		}
+		im[in] = iv
 	}
 
-	return c
+	out, err := u.Simulate(im)
+	if err != nil {
+		return false, err
+	}
+	cst.SaveUnitValue(p.UnitId, out)
+
+	return cst.GetOutputValue(p)
+}
+
+type Circuit struct {
+	CircuitName  string
+	UnitMap      map[string]Unit
+	InputPins    map[blueprint.CircuitPin]string
+	ConstantPins map[blueprint.CircuitPin]bool
+	Connectors   map[blueprint.CircuitPin]blueprint.CircuitPin
+	OutputPins   map[string]blueprint.CircuitPin
 }
 
 func (c *Circuit) Name() string {
-	return c.n
+	return c.CircuitName
 }
 
 func (c *Circuit) Input() []string {
 	im := make(map[string]bool)
-	for _, in := range c.in {
+	for _, in := range c.InputPins {
 		im[in] = true
 	}
 
@@ -69,43 +106,35 @@ func (c *Circuit) Input() []string {
 
 func (c *Circuit) Output() []string {
 	out := make([]string, 0)
-	for n := range c.out {
+	for n := range c.OutputPins {
 		out = append(out, n)
 	}
 	return out
 }
 
-func (c *Circuit) GetUnitType(uid string) (string, error) {
-	if u, ok := c.um[uid]; ok {
-		return u, nil
+func (c *Circuit) GetSimulationTracker(args map[string]bool) *CircuitSimulationTracker {
+	return &CircuitSimulationTracker{
+		Circuit:          c,
+		InputValue:       args,
+		UnitValueMap:     make(map[string]map[string]bool),
+		UnitValueMapLock: sync.RWMutex{},
 	}
-	return "", fmt.Errorf("no unit named %s", uid)
 }
 
-func (c *Circuit) AssignInputValue(args map[string]bool) map[blueprint.CircuitPin]bool {
-	m := make(map[blueprint.CircuitPin]bool)
-
-	for p, n := range c.in {
-		m[p] = args[n]
-	}
-
-	for p, v := range c.cst {
-		m[p] = v
-	}
-
-	return m
+type CircuitValueEntry struct {
+	Key   string
+	Value bool
 }
 
-func (c *Circuit) GetFeedingInput(p blueprint.CircuitPin) (blueprint.CircuitPin, error) {
-	if lp, ok := c.edge[p]; ok {
-		return lp, nil
+func (c *Circuit) Simulate(args map[string]bool) (map[string]bool, error) {
+	cst := c.GetSimulationTracker(args)
+	out := make(map[string]bool)
+	for on, op := range c.OutputPins {
+		ov, err := cst.GetOutputValue(op)
+		if err != nil {
+			return nil, err
+		}
+		out[on] = ov
 	}
-	return blueprint.CircuitPin{}, fmt.Errorf("%s is not linked to any other pin", p)
-}
-
-func (c *Circuit) GetOutputPins(n string) (blueprint.CircuitPin, error) {
-	if p, ok := c.out[n]; ok {
-		return p, nil
-	}
-	return blueprint.CircuitPin{}, fmt.Errorf("no output pin named %s", n)
+	return out, nil
 }

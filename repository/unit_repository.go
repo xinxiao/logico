@@ -4,7 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"log"
 	"path"
 
 	"github.com/xinxiao/logico/blueprint"
@@ -22,20 +21,19 @@ var (
 	builtInCircuitSource embed.FS
 
 	baseGates = []unit.Unit{
-		&unit.SingleOperandGate{Gate: unit.Gate{GateName: "not"}},
-		&unit.DoubleOperandGate{Gate: unit.Gate{GateName: "and"}},
-		&unit.DoubleOperandGate{Gate: unit.Gate{GateName: "or"}},
+		&unit.Not{},
+		&unit.And{},
+		&unit.Or{},
 	}
 
 	prebuiltCircuits, _ = LoadPrebuiltCircuit()
-
-	builtinCircuits = append(baseGates, prebuiltCircuits...)
 )
 
-func LoadPrebuiltCircuit() ([]unit.Unit, error) {
+func LoadPrebuiltCircuit() (map[string]*blueprint.CircuitBlueprint, error) {
 	cbpp := blueprint.NewCircuitBlueprintParser(builtInCircuitSource)
-	l := make([]unit.Unit, 0)
-	if err := fs.WalkDir(builtInCircuitSource, builtinPath, func(p string, f fs.DirEntry, err error) error {
+
+	m := make(map[string]*blueprint.CircuitBlueprint)
+	err := fs.WalkDir(builtInCircuitSource, builtinPath, func(p string, f fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -49,13 +47,15 @@ func LoadPrebuiltCircuit() ([]unit.Unit, error) {
 			return err
 		}
 
-		l = append(l, unit.BuildCircuitFromBlueprint(cbp))
+		m[cbp.CircuitName] = cbp
 		return nil
-	}); err != nil {
-		log.Fatal(err)
+	})
+
+	if err != nil {
 		return nil, err
 	}
-	return l, nil
+
+	return m, nil
 }
 
 type UnitRepository struct {
@@ -69,7 +69,7 @@ func NewUnitRepository() *UnitRepository {
 		bpr: &emptyBlueprintRepository{},
 	}
 
-	for _, u := range builtinCircuits {
+	for _, u := range baseGates {
 		ur.cm[u.Name()] = u
 	}
 
@@ -80,40 +80,64 @@ func (ur *UnitRepository) LinkBlueprintRepository(bpr BlueprintRepository) {
 	ur.bpr = bpr
 }
 
+func (ur *UnitRepository) CheckOutBlueprint(n string) (*blueprint.CircuitBlueprint, error) {
+	if cbp, ok := prebuiltCircuits[n]; ok {
+		return cbp, nil
+	}
+	return ur.bpr.CheckOutBlueprint(n)
+}
+
 func (ur *UnitRepository) GetUnit(n string) (unit.Unit, error) {
 	if p, ok := ur.cm[n]; ok {
 		return p, nil
 	}
 
-	if bp, err := ur.bpr.CheckOutBlueprint(n); err == nil {
-		return unit.BuildCircuitFromBlueprint(bp), err
+	if bp, err := ur.CheckOutBlueprint(n); err == nil {
+		return ur.BuildCircuitFromBlueprint(bp)
 	}
 
 	return nil, fmt.Errorf("unit %s not found", n)
 }
 
-func (ur *UnitRepository) ListAllUnits() (chan string, chan error) {
-	sc := make(chan string)
-	ec := make(chan error)
-	go ur.iterateThroughAllUnits(sc, ec)
-	return sc, ec
-}
-
-func (ur *UnitRepository) iterateThroughAllUnits(sc chan string, ec chan error) {
-	defer close(sc)
-	defer close(ec)
-
-	for _, u := range ur.cm {
-		sc <- u.Name()
+func (ur *UnitRepository) BuildCircuitFromBlueprint(cbp *blueprint.CircuitBlueprint) (unit.Unit, error) {
+	c := &unit.Circuit{
+		CircuitName:  cbp.CircuitName,
+		UnitMap:      make(map[string]unit.Unit),
+		InputPins:    make(map[blueprint.CircuitPin]string),
+		ConstantPins: make(map[blueprint.CircuitPin]bool),
+		Connectors:   make(map[blueprint.CircuitPin]blueprint.CircuitPin),
+		OutputPins:   make(map[string]blueprint.CircuitPin),
 	}
 
-	l, err := ur.bpr.ListAllBlueprints()
-	if err != nil {
-		ec <- err
-		return
+	for uid, ut := range cbp.Nodes {
+		if u, err := ur.GetUnit(ut); err != nil {
+			return nil, err
+		} else {
+			c.UnitMap[uid] = u
+		}
 	}
 
-	for _, bp := range l {
-		sc <- bp
+	for n, ipl := range cbp.Inputs {
+		for _, ip := range ipl {
+			c.InputPins[ip] = n
+		}
 	}
+
+	for _, cp := range cbp.AlwaysOn {
+		c.ConstantPins[cp] = true
+	}
+
+	for _, cp := range cbp.AlwaysOff {
+		c.ConstantPins[cp] = false
+	}
+
+	for _, e := range cbp.Connectors {
+		c.Connectors[e.To] = e.From
+	}
+
+	for n, op := range cbp.Outputs {
+		c.OutputPins[n] = op
+	}
+
+	return c, nil
 }

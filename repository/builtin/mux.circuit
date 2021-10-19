@@ -2,7 +2,7 @@ local pin = import "@pin.lib";
 local connector = import "@connector.lib";
 
 {
-    "name": "if",
+    "name": "mux",
 
     "nodes": {
         "not": "not",

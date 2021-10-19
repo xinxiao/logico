@@ -180,8 +180,8 @@ func TestSimulate_Xor(t *testing.T) {
 	}
 }
 
-func TestSimulate_If(t *testing.T) {
-	u, err := ur.GetUnit("if")
+func TestSimulate_Mux(t *testing.T) {
+	u, err := ur.GetUnit("mux")
 	if err != nil {
 		t.Fatalf("failed to get if unit: %s", err)
 	}

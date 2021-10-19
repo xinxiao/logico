@@ -128,5 +128,5 @@ func (ur *UnitRepository) BuildCircuitFromBlueprint(cbp *blueprint.CircuitBluepr
 		c.OutputPins[n] = op
 	}
 
-	return c.Expand()
+	return c, nil
 }

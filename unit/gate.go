@@ -1,37 +1,37 @@
 package unit
 
 const (
-	gateOutputName = "out"
+	GateOutputName = "out"
 )
 
-func gateOutput(v bool) map[string]bool {
-	return map[string]bool{gateOutputName: v}
+func GateOutput(v bool) map[string]bool {
+	return map[string]bool{GateOutputName: v}
 }
 
-type gate struct{}
+type Gate struct{}
 
-func (*gate) Output() []string {
-	return []string{gateOutputName}
+func (*Gate) Output() []string {
+	return []string{GateOutputName}
 }
 
-type singleOperandGate struct {
-	gate
+type SingleOperandGate struct {
+	Gate
 }
 
-func (*singleOperandGate) Input() []string {
+func (*SingleOperandGate) Input() []string {
 	return []string{"v"}
 }
 
-type doubleOperandGate struct {
-	gate
+type DoubleOperandGate struct {
+	Gate
 }
 
-func (*doubleOperandGate) Input() []string {
+func (*DoubleOperandGate) Input() []string {
 	return []string{"a", "b"}
 }
 
 type Not struct {
-	singleOperandGate
+	SingleOperandGate
 }
 
 func (*Not) Name() string {
@@ -39,11 +39,11 @@ func (*Not) Name() string {
 }
 
 func (g *Not) Simulate(args map[string]bool) (map[string]bool, error) {
-	return gateOutput(!args["v"]), nil
+	return GateOutput(!args["v"]), nil
 }
 
 type And struct {
-	doubleOperandGate
+	DoubleOperandGate
 }
 
 func (*And) Name() string {
@@ -51,11 +51,11 @@ func (*And) Name() string {
 }
 
 func (g *And) Simulate(args map[string]bool) (map[string]bool, error) {
-	return gateOutput(args["a"] && args["b"]), nil
+	return GateOutput(args["a"] && args["b"]), nil
 }
 
 type Or struct {
-	doubleOperandGate
+	DoubleOperandGate
 }
 
 func (*Or) Name() string {
@@ -63,5 +63,5 @@ func (*Or) Name() string {
 }
 
 func (g *Or) Simulate(args map[string]bool) (map[string]bool, error) {
-	return gateOutput(args["a"] || args["b"]), nil
+	return GateOutput(args["a"] || args["b"]), nil
 }

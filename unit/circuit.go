@@ -1,6 +1,7 @@
 package unit
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/xinxiao/logico/blueprint"
@@ -45,6 +46,47 @@ func (c *Circuit) GetUnit(uid string) (Unit, error) {
 		return u, nil
 	}
 	return nil, fmt.Errorf("cannot find unit %s", uid)
+}
+
+func (c *Circuit) AsBlueprint() *blueprint.CircuitBlueprint {
+	cbp := &blueprint.CircuitBlueprint{
+		CircuitName: c.Name(),
+		Nodes:       make(map[string]string),
+		AlwaysOn:    make([]blueprint.CircuitPin, 0),
+		AlwaysOff:   make([]blueprint.CircuitPin, 0),
+		Inputs:      make(map[string][]blueprint.CircuitPin),
+		Connectors:  make([]blueprint.CircuitEdge, 0),
+		Outputs:     make(map[string]blueprint.CircuitPin),
+	}
+
+	for id, u := range c.UnitMap {
+		cbp.Nodes[id] = u.Name()
+	}
+
+	for p, v := range c.ConstantPins {
+		if v {
+			cbp.AlwaysOn = append(cbp.AlwaysOn, p)
+		} else {
+			cbp.AlwaysOff = append(cbp.AlwaysOff, p)
+		}
+	}
+
+	for p, n := range c.InputPins {
+		cbp.Inputs[n] = append(cbp.Inputs[n], p)
+	}
+
+	for tp, fp := range c.Connectors {
+		cbp.Connectors = append(cbp.Connectors, blueprint.CircuitEdge{From: fp, To: tp})
+	}
+
+	cbp.Outputs = c.OutputPins
+
+	return cbp
+}
+
+func (c *Circuit) String() string {
+	b, _ := json.MarshalIndent(c.AsBlueprint(), "", "  ")
+	return string(b)
 }
 
 type CircuitSimulationTracker struct {

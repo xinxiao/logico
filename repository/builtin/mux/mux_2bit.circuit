@@ -2,7 +2,7 @@ local pin = import "@pin.lib";
 local connector = import "@connector.lib";
 
 {
-    "name": "mux",
+    "name": "mux_2bit",
 
     "nodes": {
         "not": "not",
@@ -12,9 +12,9 @@ local connector = import "@connector.lib";
     },
 
     "inputs": {
-        "a": [pin.Pin("and_0", "a")],
-        "b": [pin.Pin("and_1", "a")],
-        "cond": [
+        "v_0": [pin.Pin("and_1", "a")],
+        "v_1": [pin.Pin("and_0", "a")],
+        "cond_0": [
             pin.Pin("and_0", "b"),
             pin.Pin("not", "v"),
         ],

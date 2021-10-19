@@ -181,33 +181,57 @@ func TestSimulate_Xor(t *testing.T) {
 }
 
 func TestSimulate_Mux(t *testing.T) {
-	u, err := ur.GetUnit("mux")
-	if err != nil {
-		t.Fatalf("failed to get if unit: %s", err)
+	type TestCase struct {
+		v    int64
+		cond int64
+		out  bool
 	}
 
-	for i, tc := range []struct {
-		a, b, cond bool
-		out        bool
-	}{
-		{a: false, b: false, cond: false, out: false},
-		{a: false, b: false, cond: true, out: false},
-		{a: false, b: true, cond: false, out: true},
-		{a: false, b: true, cond: true, out: false},
-		{a: true, b: false, cond: false, out: false},
-		{a: true, b: false, cond: true, out: true},
-		{a: true, b: true, cond: false, out: true},
-		{a: true, b: true, cond: true, out: true},
+	for _, cbs := range []int{
+		1, 2, 3,
 	} {
-		got, err := u.Simulate(map[string]bool{"a": tc.a, "b": tc.b, "cond": tc.cond})
+		bs := 1 << cbs
+		n := fmt.Sprintf("mux_%dbit", bs)
+
+		u, err := ur.GetUnit(n)
 		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
+			t.Fatalf("failed to get %s unit: %s", n, err)
 		}
 
-		expected := map[string]bool{"out": tc.out}
-		if !cmp.Equal(got, expected) {
-			t.Errorf("tc %d: if(a: %t, b: %t, c: %t): %s", i, tc.a, tc.b, tc.cond, cmp.Diff(got, expected))
+		tcl := make([]TestCase, 0)
+		for v := 0; v <= int(MaskForBits(bs)); v++ {
+			for cond := 0; cond <= int(MaskForBits(cbs)); cond++ {
+				tcl = append(tcl, TestCase{
+					v:    int64(v),
+					cond: int64(cond),
+					out:  (v>>cond)&1 == 1,
+				})
+			}
 		}
+
+		t.Run(n, func(t *testing.T) {
+			for i, tc := range tcl {
+				in := make(map[string]bool)
+
+				for i := 0; i < bs; i++ {
+					in[fmt.Sprintf("v_%d", i)] = (tc.v>>i)&1 == 1
+				}
+
+				for i := 0; i < cbs; i++ {
+					in[fmt.Sprintf("cond_%d", i)] = (int(tc.cond)>>i)&1 == 1
+				}
+
+				got, err := u.Simulate(in)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+
+				expected := map[string]bool{"out": tc.out}
+				if !cmp.Equal(got, expected) {
+					t.Errorf("tc %d: %s(v: %b, cond: %b): %s", i, n, tc.v, tc.cond, cmp.Diff(got, expected))
+				}
+			}
+		})
 	}
 }
 

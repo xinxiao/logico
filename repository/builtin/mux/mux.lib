@@ -1,0 +1,62 @@
+local pin = import "@pin.lib";
+local connector = import "@connector.lib";
+local util = import "@util.lib";
+
+{
+    MultibitMux(number_of_control_bits)::
+        local name_mux = util.MultibitCircuitName("mux");
+
+        local number_of_bits = 1 << number_of_control_bits;
+
+        local half_bits = number_of_bits / 2;
+        local half_bits_mux_name = name_mux(half_bits);
+
+        local half_bits_mux_0 = half_bits_mux_name + "_0";
+        local half_bits_mux_1 = half_bits_mux_name + "_1";
+        local final_mux = "final_mux";
+
+        {
+            "name": name_mux(number_of_bits),
+
+            "nodes": {
+                [half_bits_mux_0]: half_bits_mux_name,
+                [half_bits_mux_1]: half_bits_mux_name,
+                [final_mux]: "mux_2bit",
+            },
+
+            "inputs": 
+                pin.InputBus(
+                    "v", number_of_bits, [
+                        [p]
+                        for p in 
+                            pin.PinBus(half_bits_mux_0, "v", half_bits) +
+                            pin.PinBus(half_bits_mux_1, "v", half_bits)
+                    ]) +
+                pin.InputBus(
+                    "cond", number_of_control_bits - 1, [
+                        [
+                            pin.Pin(half_bits_mux_0, pin.BusPinID("cond", i)),
+                            pin.Pin(half_bits_mux_1, pin.BusPinID("cond", i)),
+                        ]
+                        for i in std.range(0, number_of_control_bits - 2)
+                    ]) +
+                {
+                    [pin.BusPinID("cond", number_of_control_bits - 1)]: [
+                        pin.Pin("final_mux", "cond_0"),
+                    ],
+                },
+
+            "connectors": [
+                connector.Edge(
+                    pin.Pin(half_bits_mux_0, "out"), 
+                    pin.Pin(final_mux, "v_0")),
+                connector.Edge(
+                    pin.Pin(half_bits_mux_1, "out"), 
+                    pin.Pin(final_mux, "v_1")),
+            ],
+
+            "outputs": {
+                "out": pin.Pin(final_mux, "out"),
+            },
+        },
+}

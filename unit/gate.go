@@ -4,64 +4,64 @@ const (
 	gateOutputName = "out"
 )
 
-func GateOutput(v bool) map[string]bool {
+func gateOutput(v bool) map[string]bool {
 	return map[string]bool{gateOutputName: v}
 }
 
-type Gate struct{}
+type gate struct{}
 
-func (g *Gate) Output() []string {
+func (*gate) Output() []string {
 	return []string{gateOutputName}
 }
 
-type SingleOperandGate struct {
-	Gate
+type singleOperandGate struct {
+	gate
 }
 
-func (g *SingleOperandGate) Input() []string {
+func (*singleOperandGate) Input() []string {
 	return []string{"v"}
 }
 
-type DoubleOperandGate struct {
-	Gate
+type doubleOperandGate struct {
+	gate
 }
 
-func (g *DoubleOperandGate) Input() []string {
+func (*doubleOperandGate) Input() []string {
 	return []string{"a", "b"}
 }
 
 type Not struct {
-	SingleOperandGate
+	singleOperandGate
 }
 
 func (*Not) Name() string {
 	return "not"
 }
 
-func (*Not) Simulate(args map[string]bool) (map[string]bool, error) {
-	return GateOutput(!args["v"]), nil
+func (g *Not) Simulate(args map[string]bool) (map[string]bool, error) {
+	return gateOutput(!args["v"]), nil
 }
 
 type And struct {
-	DoubleOperandGate
+	doubleOperandGate
 }
 
 func (*And) Name() string {
 	return "and"
 }
 
-func (*And) Simulate(args map[string]bool) (map[string]bool, error) {
-	return GateOutput(args["a"] && args["b"]), nil
+func (g *And) Simulate(args map[string]bool) (map[string]bool, error) {
+	return gateOutput(args["a"] && args["b"]), nil
 }
 
 type Or struct {
-	DoubleOperandGate
+	doubleOperandGate
 }
 
 func (*Or) Name() string {
 	return "or"
 }
 
-func (*Or) Simulate(args map[string]bool) (map[string]bool, error) {
-	return GateOutput(args["a"] || args["b"]), nil
+func (g *Or) Simulate(args map[string]bool) (map[string]bool, error) {
+	return gateOutput(args["a"] || args["b"]), nil
 }

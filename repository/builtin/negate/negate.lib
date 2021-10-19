@@ -21,7 +21,7 @@ local util = import "@util.lib";
                 for p in pin.PinBus(flip, "v", number_of_bits)
             ]),
 
-            "always_off": pin.PinBusRange(add, "b", 1, number_of_bits) + [pin.Pin(add, "c_in")],
+            "always_off": pin.PinBusRange(add, "b", 1, number_of_bits - 1) + [pin.Pin(add, "c_in")],
             
             "always_on": [pin.Pin(add, "b_0")],
 

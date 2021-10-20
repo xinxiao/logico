@@ -16,6 +16,37 @@ func MaskForBits(bs int) int64 {
 	return (1 << bs) - 1
 }
 
+func TestSimulate_Nand(t *testing.T) {
+	u, err := ur.GetUnit("nand")
+	if err != nil {
+		t.Fatalf("failed to get nand unit: %s", err)
+	}
+
+	for i, tc := range []struct {
+		a, b bool
+		out  bool
+	}{
+		{a: true, b: true, out: false},
+		{a: false, b: true, out: true},
+		{a: true, b: false, out: true},
+		{a: false, b: false, out: true},
+	} {
+		got, err := u.Simulate(map[string]bool{"a": tc.a, "b": tc.b})
+		if got == nil {
+			t.Fatalf("unexpected nil and error: %v, %s", got, err)
+		}
+
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+
+		expected := map[string]bool{"out": tc.out}
+		if !cmp.Equal(got, expected) {
+			t.Errorf("tc %d: nand(a: %t, b: %t): %s", i, tc.a, tc.b, cmp.Diff(got, expected))
+		}
+	}
+}
+
 func TestSimulate_Not(t *testing.T) {
 	u, err := ur.GetUnit("not")
 	if err != nil {
@@ -91,37 +122,6 @@ func TestSimulate_Or(t *testing.T) {
 		expected := map[string]bool{"out": tc.out}
 		if !cmp.Equal(got, expected) {
 			t.Errorf("tc %d: or(a: %t, b: %t): %s", i, tc.a, tc.b, cmp.Diff(got, expected))
-		}
-	}
-}
-
-func TestSimulate_Nand(t *testing.T) {
-	u, err := ur.GetUnit("nand")
-	if err != nil {
-		t.Fatalf("failed to get nand unit: %s", err)
-	}
-
-	for i, tc := range []struct {
-		a, b bool
-		out  bool
-	}{
-		{a: true, b: true, out: false},
-		{a: false, b: true, out: true},
-		{a: true, b: false, out: true},
-		{a: false, b: false, out: true},
-	} {
-		got, err := u.Simulate(map[string]bool{"a": tc.a, "b": tc.b})
-		if got == nil {
-			t.Fatalf("unexpected nil and error: %v, %s", got, err)
-		}
-
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-
-		expected := map[string]bool{"out": tc.out}
-		if !cmp.Equal(got, expected) {
-			t.Errorf("tc %d: nand(a: %t, b: %t): %s", i, tc.a, tc.b, cmp.Diff(got, expected))
 		}
 	}
 }

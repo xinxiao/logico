@@ -1,0 +1,20 @@
+local pin = import "@pin.lib";
+
+{
+    "name": "not",
+    
+    "nodes": {
+        "nand": "nand",
+    },
+
+    "inputs": {
+        "v": [
+            pin.Pin("nand", "a"),
+            pin.Pin("nand", "b"),
+        ],
+    },
+
+    "outputs": {
+        "out": pin.Pin("nand", "out"),
+    },
+}

@@ -16,9 +16,7 @@ const (
 
 var (
 	gateProviders = map[string]func() unit.Unit{
-		"not": func() unit.Unit { return &unit.Not{} },
-		"and": func() unit.Unit { return &unit.And{} },
-		"or":  func() unit.Unit { return &unit.Or{} },
+		"nand": func() unit.Unit { return &unit.Nand{} },
 	}
 
 	//go:embed builtin/*.circuit

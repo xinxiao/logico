@@ -186,7 +186,7 @@ func ConcatUnitName(pre, suf string) string {
 	return fmt.Sprintf("%s.%s", pre, suf)
 }
 
-func (c *Circuit) TraceInputPins(un, pn string) ([]blueprint.CircuitPin, error) {
+func (c *Circuit) TraceInputPins(uid, pid string) ([]blueprint.CircuitPin, error) {
 	im := make(map[string][]blueprint.CircuitPin)
 	for p, n := range c.InputPins {
 		if l, ok := im[n]; !ok {
@@ -196,9 +196,9 @@ func (c *Circuit) TraceInputPins(un, pn string) ([]blueprint.CircuitPin, error) 
 		}
 	}
 
-	l, ok := im[pn]
+	l, ok := im[pid]
 	if !ok {
-		return nil, fmt.Errorf("cannot find input pin %s", pn)
+		return nil, fmt.Errorf("cannot find input pin %s", pid)
 	}
 
 	r := make([]blueprint.CircuitPin, 0)
@@ -206,8 +206,8 @@ func (c *Circuit) TraceInputPins(un, pn string) ([]blueprint.CircuitPin, error) 
 		if u, ok := c.UnitMap[p.UnitId]; !ok {
 			return nil, fmt.Errorf("cannot find unit %s", p.UnitId)
 		} else if sc, ok := u.(*Circuit); !ok {
-			r = append(r, blueprint.CircuitPin{UnitId: ConcatUnitName(un, p.UnitId), PinId: p.PinId})
-		} else if sl, err := sc.TraceInputPins(ConcatUnitName(un, p.UnitId), p.PinId); err != nil {
+			r = append(r, blueprint.CircuitPin{UnitId: ConcatUnitName(uid, p.UnitId), PinId: p.PinId})
+		} else if sl, err := sc.TraceInputPins(ConcatUnitName(uid, p.UnitId), p.PinId); err != nil {
 			return nil, err
 		} else {
 			r = append(r, sl...)
@@ -216,9 +216,9 @@ func (c *Circuit) TraceInputPins(un, pn string) ([]blueprint.CircuitPin, error) 
 	return r, nil
 }
 
-func (c *Circuit) TraceOutputPin(un, pn string) (blueprint.CircuitPin, error) {
+func (c *Circuit) TraceOutputPin(uid, pid string) (blueprint.CircuitPin, error) {
 	for n, p := range c.OutputPins {
-		if n != pn {
+		if n != pid {
 			continue
 		}
 
@@ -226,7 +226,7 @@ func (c *Circuit) TraceOutputPin(un, pn string) (blueprint.CircuitPin, error) {
 		if !ok {
 			return blueprint.CircuitPin{}, fmt.Errorf("cannot find unit %s", p.UnitId)
 		}
-		cn := ConcatUnitName(un, p.UnitId)
+		cn := ConcatUnitName(uid, p.UnitId)
 
 		sc, ok := su.(*Circuit)
 		if !ok {
@@ -237,7 +237,7 @@ func (c *Circuit) TraceOutputPin(un, pn string) (blueprint.CircuitPin, error) {
 			return op, nil
 		}
 	}
-	return blueprint.CircuitPin{}, fmt.Errorf("cannot find output pin %s", un)
+	return blueprint.CircuitPin{}, fmt.Errorf("cannot find output pin %s", uid)
 }
 
 func (c *Circuit) Expand() (*Circuit, error) {

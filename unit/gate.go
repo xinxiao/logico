@@ -1,67 +1,30 @@
 package unit
 
-const (
-	GateOutputName = "out"
+import (
+	"fmt"
 )
 
-func GateOutput(v bool) map[string]bool {
-	return map[string]bool{GateOutputName: v}
+type Nand struct{}
+
+func (*Nand) Name() string {
+	return "nand"
 }
 
-type Gate struct{}
-
-func (*Gate) Output() []string {
-	return []string{GateOutputName}
-}
-
-type SingleOperandGate struct {
-	Gate
-}
-
-func (*SingleOperandGate) Input() []string {
-	return []string{"v"}
-}
-
-type DoubleOperandGate struct {
-	Gate
-}
-
-func (*DoubleOperandGate) Input() []string {
+func (*Nand) Input() []string {
 	return []string{"a", "b"}
 }
-
-type Not struct {
-	SingleOperandGate
+func (*Nand) Output() []string {
+	return []string{"out"}
 }
 
-func (*Not) Name() string {
-	return "not"
-}
+func (*Nand) Simulate(args map[string]bool) (map[string]bool, error) {
+	if _, ok := args["a"]; !ok {
+		return nil, fmt.Errorf("missing input a")
+	}
 
-func (g *Not) Simulate(args map[string]bool) (map[string]bool, error) {
-	return GateOutput(!args["v"]), nil
-}
+	if _, ok := args["b"]; !ok {
+		return nil, fmt.Errorf("missing input b")
+	}
 
-type And struct {
-	DoubleOperandGate
-}
-
-func (*And) Name() string {
-	return "and"
-}
-
-func (g *And) Simulate(args map[string]bool) (map[string]bool, error) {
-	return GateOutput(args["a"] && args["b"]), nil
-}
-
-type Or struct {
-	DoubleOperandGate
-}
-
-func (*Or) Name() string {
-	return "or"
-}
-
-func (g *Or) Simulate(args map[string]bool) (map[string]bool, error) {
-	return GateOutput(args["a"] || args["b"]), nil
+	return map[string]bool{"out": !(args["a"] && args["b"])}, nil
 }

@@ -1,4 +1,4 @@
-package blueprint
+package specification
 
 import (
 	"embed"
@@ -64,35 +64,35 @@ func (cfi *CircuitBlueprintImporter) Import(loc, p string) (jsonnet.Contents, st
 	return c, ip, nil
 }
 
-type CircuitBlueprintParser struct {
+type BlueprintParser struct {
 	vm *jsonnet.VM
 	fs fs.FS
 }
 
-func NewCircuitBlueprintParser(fs fs.FS) *CircuitBlueprintParser {
+func NewBlueprintParser(fs fs.FS) *BlueprintParser {
 	vm := jsonnet.MakeVM()
 	vm.Importer(&CircuitBlueprintImporter{fs, make(map[string]jsonnet.Contents)})
-	return &CircuitBlueprintParser{vm, fs}
+	return &BlueprintParser{vm, fs}
 }
 
-func (cbpp *CircuitBlueprintParser) ParseFile(f string) (*CircuitBlueprint, error) {
-	src, err := cbpp.vm.EvaluateFile(f)
+func (bpp *BlueprintParser) ParseFile(f string) (*Blueprint, error) {
+	src, err := bpp.vm.EvaluateFile(f)
 	if err != nil {
 		return nil, err
 	}
-	return cbpp.ParseJson(src)
+	return bpp.ParseJson(src)
 }
 
-func (cbpp *CircuitBlueprintParser) ParseJsonnet(src string) (*CircuitBlueprint, error) {
-	src, err := cbpp.vm.EvaluateAnonymousSnippet("src", string(src))
+func (bpp *BlueprintParser) ParseJsonnet(src string) (*Blueprint, error) {
+	src, err := bpp.vm.EvaluateAnonymousSnippet("src", string(src))
 	if err != nil {
 		return nil, err
 	}
-	return cbpp.ParseJson(src)
+	return bpp.ParseJson(src)
 }
 
-func (cbpp *CircuitBlueprintParser) ParseJson(src string) (*CircuitBlueprint, error) {
-	cm := &CircuitBlueprint{}
+func (bpp *BlueprintParser) ParseJson(src string) (*Blueprint, error) {
+	cm := &Blueprint{}
 	if err := json.Unmarshal([]byte(src), cm); err != nil {
 		return nil, err
 	}

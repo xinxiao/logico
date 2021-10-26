@@ -2,11 +2,10 @@ package repository
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
 	"path"
 
-	"github.com/xinxiao/logico/blueprint"
+	"github.com/xinxiao/logico/specification"
 	"github.com/xinxiao/logico/unit"
 )
 
@@ -15,8 +14,8 @@ const (
 )
 
 var (
-	gateProviders = map[string]func() unit.Unit{
-		"nand": func() unit.Unit { return &unit.Nand{} },
+	gates = map[string]unit.Unit{
+		"nand": &unit.Nand{},
 	}
 
 	//go:embed builtin/*.circuit
@@ -27,25 +26,25 @@ var (
 	prebuiltCircuits, _ = LoadPrebuiltCircuit()
 )
 
-func LoadPrebuiltCircuit() (map[string]*blueprint.CircuitBlueprint, error) {
-	cbpp := blueprint.NewCircuitBlueprintParser(prebuiltCircuitSource)
+func LoadPrebuiltCircuit() (map[string]*specification.Blueprint, error) {
+	bpp := specification.NewBlueprintParser(prebuiltCircuitSource)
 
-	m := make(map[string]*blueprint.CircuitBlueprint)
+	m := make(map[string]*specification.Blueprint)
 	err := fs.WalkDir(prebuiltCircuitSource, builtinPath, func(p string, f fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if f.IsDir() || path.Ext(f.Name()) != blueprint.CircuitBlueprintFileExtension {
+		if f.IsDir() || path.Ext(f.Name()) != specification.CircuitBlueprintFileExtension {
 			return nil
 		}
 
-		cbp, err := cbpp.ParseFile(p)
+		bp, err := bpp.ParseFile(p)
 		if err != nil {
 			return err
 		}
 
-		m[cbp.CircuitName] = cbp
+		m[bp.CircuitName] = bp
 		return nil
 	})
 
@@ -58,11 +57,15 @@ func LoadPrebuiltCircuit() (map[string]*blueprint.CircuitBlueprint, error) {
 
 type UnitRepository struct {
 	bpr BlueprintRepository
+	ubo []UnitBuildOption
 }
 
-func NewUnitRepository() *UnitRepository {
+type UnitBuildOption func(unit.Unit) (unit.Unit, error)
+
+func NewUnitRepository(ubo ...UnitBuildOption) *UnitRepository {
 	return &UnitRepository{
 		bpr: &emptyBlueprintRepository{},
+		ubo: ubo,
 	}
 }
 
@@ -71,32 +74,35 @@ func (ur *UnitRepository) LinkBlueprintRepository(bpr BlueprintRepository) {
 }
 
 func (ur *UnitRepository) GetUnit(n string) (unit.Unit, error) {
-	if u, ok := gateProviders[n]; ok {
-		return u(), nil
+	if u, ok := gates[n]; ok {
+		return u, nil
 	}
 
-	if cbp, ok := prebuiltCircuits[n]; ok {
-		return ur.BuildCircuitFromBlueprint(cbp)
+	bp, err := ur.loadBlueprint(n)
+	if err != nil {
+		return nil, err
 	}
-
-	if cbp, err := ur.bpr.CheckOutBlueprint(n); err == nil {
-		return ur.BuildCircuitFromBlueprint(cbp)
-	}
-
-	return nil, fmt.Errorf("unit %s not found", n)
+	return ur.buildCircuitFromBlueprint(bp)
 }
 
-func (ur *UnitRepository) BuildCircuitFromBlueprint(cbp *blueprint.CircuitBlueprint) (unit.Unit, error) {
+func (ur *UnitRepository) loadBlueprint(n string) (*specification.Blueprint, error) {
+	if bp, ok := prebuiltCircuits[n]; ok {
+		return bp, nil
+	}
+	return ur.bpr.CheckOutBlueprint(n)
+}
+
+func (ur *UnitRepository) buildCircuitFromBlueprint(bp *specification.Blueprint) (unit.Unit, error) {
 	c := &unit.Circuit{
-		CircuitName:  cbp.CircuitName,
+		CircuitName:  bp.CircuitName,
 		UnitMap:      make(map[string]unit.Unit),
-		InputPins:    make(map[blueprint.CircuitPin]string),
-		ConstantPins: make(map[blueprint.CircuitPin]bool),
-		Connectors:   make(map[blueprint.CircuitPin]blueprint.CircuitPin),
-		OutputPins:   make(map[string]blueprint.CircuitPin),
+		InputPins:    make(map[specification.Pin]string),
+		ConstantPins: make(map[specification.Pin]bool),
+		Connections:  make(map[specification.Pin]specification.Pin),
+		OutputPins:   make(map[string]specification.Pin),
 	}
 
-	for uid, ut := range cbp.Nodes {
+	for uid, ut := range bp.Nodes {
 		u, err := ur.GetUnit(ut)
 		if err != nil {
 			return nil, err
@@ -104,25 +110,25 @@ func (ur *UnitRepository) BuildCircuitFromBlueprint(cbp *blueprint.CircuitBluepr
 		c.UnitMap[uid] = u
 	}
 
-	for n, ipl := range cbp.Inputs {
+	for n, ipl := range bp.Inputs {
 		for _, ip := range ipl {
 			c.InputPins[ip] = n
 		}
 	}
 
-	for _, cp := range cbp.AlwaysOn {
+	for _, cp := range bp.AlwaysOn {
 		c.ConstantPins[cp] = true
 	}
 
-	for _, cp := range cbp.AlwaysOff {
+	for _, cp := range bp.AlwaysOff {
 		c.ConstantPins[cp] = false
 	}
 
-	for _, e := range cbp.Connectors {
-		c.Connectors[e.To] = e.From
+	for _, e := range bp.Connectors {
+		c.Connections[e.To] = e.From
 	}
 
-	for n, op := range cbp.Outputs {
+	for n, op := range bp.Outputs {
 		c.OutputPins[n] = op
 	}
 

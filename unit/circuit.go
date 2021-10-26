@@ -4,16 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/xinxiao/logico/blueprint"
+	"github.com/xinxiao/logico/specification"
 )
 
 type Circuit struct {
 	CircuitName  string
 	UnitMap      map[string]Unit
-	InputPins    map[blueprint.CircuitPin]string
-	ConstantPins map[blueprint.CircuitPin]bool
-	Connectors   map[blueprint.CircuitPin]blueprint.CircuitPin
-	OutputPins   map[string]blueprint.CircuitPin
+	InputPins    map[specification.Pin]string
+	ConstantPins map[specification.Pin]bool
+	Connections  map[specification.Pin]specification.Pin
+	OutputPins   map[string]specification.Pin
+}
+
+func ExpandCircuit(u Unit) (Unit, error) {
+	if c, ok := u.(*Circuit); ok {
+		return c.expand()
+	}
+	return u, nil
 }
 
 func (c *Circuit) Name() string {
@@ -41,47 +48,47 @@ func (c *Circuit) Output() []string {
 	return out
 }
 
-func (c *Circuit) GetUnit(uid string) (Unit, error) {
+func (c *Circuit) getUnit(uid string) (Unit, error) {
 	if u, ok := c.UnitMap[uid]; ok {
 		return u, nil
 	}
 	return nil, fmt.Errorf("cannot find unit %s", uid)
 }
 
-func (c *Circuit) AsBlueprint() *blueprint.CircuitBlueprint {
-	cbp := &blueprint.CircuitBlueprint{
+func (c *Circuit) AsBlueprint() *specification.Blueprint {
+	bp := &specification.Blueprint{
 		CircuitName: c.Name(),
 		Nodes:       make(map[string]string),
-		AlwaysOn:    make([]blueprint.CircuitPin, 0),
-		AlwaysOff:   make([]blueprint.CircuitPin, 0),
-		Inputs:      make(map[string][]blueprint.CircuitPin),
-		Connectors:  make([]blueprint.CircuitEdge, 0),
-		Outputs:     make(map[string]blueprint.CircuitPin),
+		AlwaysOn:    make([]specification.Pin, 0),
+		AlwaysOff:   make([]specification.Pin, 0),
+		Inputs:      make(map[string][]specification.Pin),
+		Connectors:  make([]specification.Edge, 0),
+		Outputs:     make(map[string]specification.Pin),
 	}
 
 	for id, u := range c.UnitMap {
-		cbp.Nodes[id] = u.Name()
+		bp.Nodes[id] = u.Name()
 	}
 
 	for p, v := range c.ConstantPins {
 		if v {
-			cbp.AlwaysOn = append(cbp.AlwaysOn, p)
+			bp.AlwaysOn = append(bp.AlwaysOn, p)
 		} else {
-			cbp.AlwaysOff = append(cbp.AlwaysOff, p)
+			bp.AlwaysOff = append(bp.AlwaysOff, p)
 		}
 	}
 
 	for p, n := range c.InputPins {
-		cbp.Inputs[n] = append(cbp.Inputs[n], p)
+		bp.Inputs[n] = append(bp.Inputs[n], p)
 	}
 
-	for tp, fp := range c.Connectors {
-		cbp.Connectors = append(cbp.Connectors, blueprint.CircuitEdge{From: fp, To: tp})
+	for tp, fp := range c.Connections {
+		bp.Connectors = append(bp.Connectors, specification.Edge{From: fp, To: tp})
 	}
 
-	cbp.Outputs = c.OutputPins
+	bp.Outputs = c.OutputPins
 
-	return cbp
+	return bp
 }
 
 func (c *Circuit) String() string {
@@ -95,16 +102,16 @@ type CircuitSimulationTracker struct {
 	UnitValueMap map[string]map[string]bool
 }
 
-func (cst *CircuitSimulationTracker) ReadUnitValue(uid string) (map[string]bool, bool) {
+func (cst *CircuitSimulationTracker) readUnitValue(uid string) (map[string]bool, bool) {
 	m, ok := cst.UnitValueMap[uid]
 	return m, ok
 }
 
-func (cst *CircuitSimulationTracker) SaveUnitValue(uid string, vm map[string]bool) {
+func (cst *CircuitSimulationTracker) saveUnitValue(uid string, vm map[string]bool) {
 	cst.UnitValueMap[uid] = vm
 }
 
-func (cst *CircuitSimulationTracker) GetInputValue(p blueprint.CircuitPin) (bool, error) {
+func (cst *CircuitSimulationTracker) getInputValue(p specification.Pin) (bool, error) {
 	if v, ok := cst.Circuit.ConstantPins[p]; ok {
 		return v, nil
 	}
@@ -115,15 +122,15 @@ func (cst *CircuitSimulationTracker) GetInputValue(p blueprint.CircuitPin) (bool
 		}
 	}
 
-	if fp, ok := cst.Circuit.Connectors[p]; ok {
-		return cst.GetOutputValue(fp)
+	if fp, ok := cst.Circuit.Connections[p]; ok {
+		return cst.getOutputValue(fp)
 	}
 
 	return false, fmt.Errorf("cannot find input value for pin %s", p)
 }
 
-func (cst *CircuitSimulationTracker) GetOutputValue(p blueprint.CircuitPin) (bool, error) {
-	if m, ok := cst.ReadUnitValue(p.UnitId); ok {
+func (cst *CircuitSimulationTracker) getOutputValue(p specification.Pin) (bool, error) {
+	if m, ok := cst.readUnitValue(p.UnitId); ok {
 		if v, ok := m[p.PinId]; ok {
 			return v, nil
 		}
@@ -137,7 +144,7 @@ func (cst *CircuitSimulationTracker) GetOutputValue(p blueprint.CircuitPin) (boo
 
 	im := make(map[string]bool)
 	for _, in := range u.Input() {
-		iv, err := cst.GetInputValue(blueprint.CircuitPin{UnitId: p.UnitId, PinId: in})
+		iv, err := cst.getInputValue(specification.Pin{UnitId: p.UnitId, PinId: in})
 		if err != nil {
 			return false, err
 		}
@@ -148,12 +155,12 @@ func (cst *CircuitSimulationTracker) GetOutputValue(p blueprint.CircuitPin) (boo
 	if err != nil {
 		return false, err
 	}
-	cst.SaveUnitValue(p.UnitId, out)
+	cst.saveUnitValue(p.UnitId, out)
 
-	return cst.GetOutputValue(p)
+	return cst.getOutputValue(p)
 }
 
-func (c *Circuit) GetSimulationTracker(args map[string]bool) *CircuitSimulationTracker {
+func (c *Circuit) getSimulationTracker(args map[string]bool) *CircuitSimulationTracker {
 	return &CircuitSimulationTracker{
 		Circuit:      c,
 		InputValue:   args,
@@ -162,10 +169,10 @@ func (c *Circuit) GetSimulationTracker(args map[string]bool) *CircuitSimulationT
 }
 
 func (c *Circuit) Simulate(args map[string]bool) (map[string]bool, error) {
-	cst := c.GetSimulationTracker(args)
+	cst := c.getSimulationTracker(args)
 	out := make(map[string]bool)
 	for on, op := range c.OutputPins {
-		ov, err := cst.GetOutputValue(op)
+		ov, err := cst.getOutputValue(op)
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +181,7 @@ func (c *Circuit) Simulate(args map[string]bool) (map[string]bool, error) {
 	return out, nil
 }
 
-func ConcatUnitName(pre, suf string) string {
+func concatUnitName(pre, suf string) string {
 	if pre == "" {
 		return suf
 	}
@@ -186,28 +193,18 @@ func ConcatUnitName(pre, suf string) string {
 	return fmt.Sprintf("%s.%s", pre, suf)
 }
 
-func (c *Circuit) TraceInputPins(uid, pid string) ([]blueprint.CircuitPin, error) {
-	im := make(map[string][]blueprint.CircuitPin)
+func (c *Circuit) traceInputPins(uid, pid string) ([]specification.Pin, error) {
+	r := make([]specification.Pin, 0)
 	for p, n := range c.InputPins {
-		if l, ok := im[n]; !ok {
-			im[n] = []blueprint.CircuitPin{p}
-		} else {
-			im[n] = append(l, p)
+		if n != pid {
+			continue
 		}
-	}
 
-	l, ok := im[pid]
-	if !ok {
-		return nil, fmt.Errorf("cannot find input pin %s", pid)
-	}
-
-	r := make([]blueprint.CircuitPin, 0)
-	for _, p := range l {
 		if u, ok := c.UnitMap[p.UnitId]; !ok {
 			return nil, fmt.Errorf("cannot find unit %s", p.UnitId)
 		} else if sc, ok := u.(*Circuit); !ok {
-			r = append(r, blueprint.CircuitPin{UnitId: ConcatUnitName(uid, p.UnitId), PinId: p.PinId})
-		} else if sl, err := sc.TraceInputPins(ConcatUnitName(uid, p.UnitId), p.PinId); err != nil {
+			r = append(r, specification.Pin{UnitId: concatUnitName(uid, p.UnitId), PinId: p.PinId})
+		} else if sl, err := sc.traceInputPins(concatUnitName(uid, p.UnitId), p.PinId); err != nil {
 			return nil, err
 		} else {
 			r = append(r, sl...)
@@ -216,7 +213,7 @@ func (c *Circuit) TraceInputPins(uid, pid string) ([]blueprint.CircuitPin, error
 	return r, nil
 }
 
-func (c *Circuit) TraceOutputPin(uid, pid string) (blueprint.CircuitPin, error) {
+func (c *Circuit) traceOutputPin(uid, pid string) (specification.Pin, error) {
 	for n, p := range c.OutputPins {
 		if n != pid {
 			continue
@@ -224,30 +221,29 @@ func (c *Circuit) TraceOutputPin(uid, pid string) (blueprint.CircuitPin, error) 
 
 		su, ok := c.UnitMap[p.UnitId]
 		if !ok {
-			return blueprint.CircuitPin{}, fmt.Errorf("cannot find unit %s", p.UnitId)
+			return specification.Pin{}, fmt.Errorf("cannot find unit %s", p.UnitId)
 		}
-		cn := ConcatUnitName(uid, p.UnitId)
+		cn := concatUnitName(uid, p.UnitId)
 
-		sc, ok := su.(*Circuit)
-		if !ok {
-			return blueprint.CircuitPin{UnitId: cn, PinId: p.PinId}, nil
-		} else if op, err := sc.TraceOutputPin(cn, p.PinId); err != nil {
-			return blueprint.CircuitPin{}, err
+		if sc, ok := su.(*Circuit); !ok {
+			return specification.Pin{UnitId: cn, PinId: p.PinId}, nil
+		} else if op, err := sc.traceOutputPin(cn, p.PinId); err != nil {
+			return specification.Pin{}, err
 		} else {
 			return op, nil
 		}
 	}
-	return blueprint.CircuitPin{}, fmt.Errorf("cannot find output pin %s", uid)
+	return specification.Pin{}, fmt.Errorf("cannot find output pin %s", uid)
 }
 
-func (c *Circuit) Expand() (*Circuit, error) {
+func (c *Circuit) expand() (*Circuit, error) {
 	ec := &Circuit{
 		CircuitName:  c.CircuitName,
 		UnitMap:      make(map[string]Unit),
-		InputPins:    make(map[blueprint.CircuitPin]string),
-		ConstantPins: make(map[blueprint.CircuitPin]bool),
-		Connectors:   make(map[blueprint.CircuitPin]blueprint.CircuitPin),
-		OutputPins:   make(map[string]blueprint.CircuitPin),
+		InputPins:    make(map[specification.Pin]string),
+		ConstantPins: make(map[specification.Pin]bool),
+		Connections:  make(map[specification.Pin]specification.Pin),
+		OutputPins:   make(map[string]specification.Pin),
 	}
 
 	for sn, su := range c.UnitMap {
@@ -257,29 +253,29 @@ func (c *Circuit) Expand() (*Circuit, error) {
 			continue
 		}
 
-		esc, err := sc.Expand()
+		esc, err := sc.expand()
 		if err != nil {
 			return nil, err
 		}
 
 		for n, u := range esc.UnitMap {
-			ec.UnitMap[ConcatUnitName(sn, n)] = u
+			ec.UnitMap[concatUnitName(sn, n)] = u
 		}
 
 		for p, v := range esc.ConstantPins {
-			cp := blueprint.CircuitPin{UnitId: ConcatUnitName(sn, p.UnitId), PinId: p.PinId}
+			cp := specification.Pin{UnitId: concatUnitName(sn, p.UnitId), PinId: p.PinId}
 			ec.ConstantPins[cp] = v
 		}
 
-		for ot, of := range esc.Connectors {
-			ct := blueprint.CircuitPin{UnitId: ConcatUnitName(sn, ot.UnitId), PinId: ot.PinId}
-			cf := blueprint.CircuitPin{UnitId: ConcatUnitName(sn, of.UnitId), PinId: of.PinId}
-			ec.Connectors[ct] = cf
+		for ot, of := range esc.Connections {
+			ct := specification.Pin{UnitId: concatUnitName(sn, ot.UnitId), PinId: ot.PinId}
+			cf := specification.Pin{UnitId: concatUnitName(sn, of.UnitId), PinId: of.PinId}
+			ec.Connections[ct] = cf
 		}
 	}
 
 	for _, n := range c.Input() {
-		il, err := c.TraceInputPins("", n)
+		il, err := c.traceInputPins("", n)
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +286,7 @@ func (c *Circuit) Expand() (*Circuit, error) {
 	}
 
 	for _, n := range c.Output() {
-		op, err := c.TraceOutputPin("", n)
+		op, err := c.traceOutputPin("", n)
 		if err != nil {
 			return nil, err
 		}
@@ -298,11 +294,11 @@ func (c *Circuit) Expand() (*Circuit, error) {
 	}
 
 	for cp, v := range c.ConstantPins {
-		if cu, err := c.GetUnit(cp.UnitId); err != nil {
+		if cu, err := c.getUnit(cp.UnitId); err != nil {
 			return nil, err
 		} else if cc, ok := cu.(*Circuit); !ok {
 			ec.ConstantPins[cp] = v
-		} else if cpl, err := cc.TraceInputPins(cp.UnitId, cp.PinId); err != nil {
+		} else if cpl, err := cc.traceInputPins(cp.UnitId, cp.PinId); err != nil {
 			return nil, err
 		} else {
 			for _, p := range cpl {
@@ -311,28 +307,28 @@ func (c *Circuit) Expand() (*Circuit, error) {
 		}
 	}
 
-	for tp, fp := range c.Connectors {
-		tpl := []blueprint.CircuitPin{tp}
-		if tu, err := c.GetUnit(tp.UnitId); err != nil {
+	for tp, fp := range c.Connections {
+		tpl := []specification.Pin{tp}
+		if tu, err := c.getUnit(tp.UnitId); err != nil {
 			return nil, err
 		} else if tc, ok := tu.(*Circuit); ok {
-			tpl, err = tc.TraceInputPins(tp.UnitId, tp.PinId)
+			tpl, err = tc.traceInputPins(tp.UnitId, tp.PinId)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		if fu, err := c.GetUnit(fp.UnitId); err != nil {
+		if fu, err := c.getUnit(fp.UnitId); err != nil {
 			return nil, err
 		} else if oc, ok := fu.(*Circuit); ok {
-			fp, err = oc.TraceOutputPin(fp.UnitId, fp.PinId)
+			fp, err = oc.traceOutputPin(fp.UnitId, fp.PinId)
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		for _, tp := range tpl {
-			ec.Connectors[tp] = fp
+			ec.Connections[tp] = fp
 		}
 	}
 

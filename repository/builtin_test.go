@@ -1,15 +1,17 @@
-package simulation
+package repository
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/xinxiao/logico/repository"
+	"github.com/xinxiao/logico/unit"
 )
 
 var (
-	ur = repository.NewUnitRepository()
+	ur = NewUnitRepository(
+		unit.ExpandCircuit,
+	)
 )
 
 func MaskForBits(bs int) int64 {
